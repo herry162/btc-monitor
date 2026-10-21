@@ -1,1 +1,604 @@
-x
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BTC／MSTR 指標監控</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f2f5f7;
+    --panel: #ffffff;
+    --line: #dce3e9;
+    --grid: rgba(18, 32, 43, 0.06);
+    --text: #12202b;
+    --muted: #5a6a77;
+    --btc: #b86200;
+    --up: #12804f;
+    --down: #c2382f;
+    --warn: #8a6a00;
+    --zone-stop: rgba(194, 56, 47, 0.10);
+    --zone-risk: rgba(194, 56, 47, 0.05);
+    --zone-mid: rgba(18, 32, 43, 0.04);
+    --zone-up: rgba(18, 128, 79, 0.10);
+    --band1: rgba(60, 100, 170, 0.13);
+    --band2: rgba(60, 100, 170, 0.09);
+    --band3: rgba(60, 100, 170, 0.05);
+    --num: "Barlow Semi Condensed", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    --cjk: -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Heiti TC", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #0d1620;
+      --panel: #142230;
+      --line: #22313f;
+      --grid: rgba(227, 234, 240, 0.05);
+      --text: #e3eaf0;
+      --muted: #8394a2;
+      --btc: #f7931a;
+      --up: #2db57b;
+      --down: #e5544b;
+      --warn: #d9b44a;
+      --zone-stop: rgba(229, 84, 75, 0.16);
+      --zone-risk: rgba(229, 84, 75, 0.07);
+      --zone-mid: rgba(227, 234, 240, 0.04);
+      --zone-up: rgba(45, 181, 123, 0.14);
+      --band1: rgba(110, 150, 215, 0.17);
+      --band2: rgba(110, 150, 215, 0.11);
+      --band3: rgba(110, 150, 215, 0.06);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { height: 100%; }
+  :root {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--cjk);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 20px 16px 48px;
+  }
+  .num { font-family: var(--num); font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+  h2 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0 0 12px;
+  }
+  section { margin-top: 28px; }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--btc); outline-offset: 2px; border-radius: 4px; }
+
+  /* ---------- 頂部價格 ---------- */
+  .top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+  .pair { color: var(--muted); font-size: 14px; }
+  .price { font-family: var(--num); font-weight: 600; font-size: clamp(44px, 13vw, 64px); line-height: 1; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .sub { display: flex; gap: 10px; align-items: center; margin-top: 8px; font-size: 14px; }
+  .chg { font-family: var(--num); font-weight: 600; font-size: 16px; }
+  .chg.up { color: var(--up); } .chg.down { color: var(--down); }
+  .live { color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+  .live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+  .live.on::before { background: var(--up); }
+  .updated { color: var(--muted); font-size: 13px; text-align: right; }
+
+  .banners { margin-top: 16px; display: grid; gap: 8px; }
+  .banner { padding: 10px 12px; border-radius: 8px; font-size: 14px; background: var(--panel); border-left: 3px solid var(--warn); }
+  .banner.error { border-left-color: var(--down); }
+  .banner.info { border-left-color: var(--muted); }
+
+  /* ---------- 價位尺：這頁的主角 ---------- */
+  .ruler { position: relative; margin-top: 30px; padding: 46px 0 64px; }
+  .track { position: relative; height: 14px; border-radius: 7px; overflow: hidden; display: flex; }
+  .track span { display: block; height: 100%; }
+  .tick { position: absolute; top: 40px; width: 1px; height: 26px; background: var(--muted); }
+  .tick-label { position: absolute; transform: translateX(-50%); white-space: nowrap; text-align: center; font-size: 12px; color: var(--muted); line-height: 1.3; }
+  .tick-label b { display: block; font-family: var(--num); font-weight: 600; font-size: 15px; color: var(--text); }
+  .needle { position: absolute; top: 0; height: 68px; width: 0; transition: left 0.9s cubic-bezier(.2,.8,.2,1); }
+  .needle::before { content: ""; position: absolute; left: -1.5px; top: 24px; bottom: 0; width: 3px; border-radius: 2px; background: var(--btc); }
+  .needle span { position: absolute; top: 0; transform: translateX(-50%); font-family: var(--num); font-weight: 700; font-size: 17px; color: var(--btc); white-space: nowrap; }
+  .ruler-caption { color: var(--muted); font-size: 14px; margin: 0; }
+  @media (prefers-reduced-motion: reduce) { .needle { transition: none; } }
+
+  /* ---------- 指標排行 ---------- */
+  .signals { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+  .signals li { display: grid; grid-template-columns: 30px 1fr auto; column-gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+  .rank { font-family: var(--num); font-weight: 600; font-size: 20px; color: var(--muted); line-height: 1.2; }
+  .sig-name { font-weight: 600; }
+  .sig-value { font-family: var(--num); font-weight: 600; font-size: 17px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .sig-detail { grid-column: 2 / 4; color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .signals li.pending .sig-name, .signals li.pending .sig-value { color: var(--muted); font-weight: 500; }
+  .signals li.pending .sig-value { font-family: var(--cjk); font-size: 14px; }
+  .signals li.pending .rank { opacity: 0.5; }
+  .tone-up { color: var(--up); } .tone-down { color: var(--down); } .tone-warn { color: var(--warn); }
+
+  /* ---------- 圖表 ---------- */
+  .chart-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .chart-head h2 { margin: 0; }
+  .seg { display: inline-flex; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
+  .seg button { border: 0; background: transparent; padding: 5px 14px; border-radius: 6px; cursor: pointer; font-family: var(--num); font-weight: 600; font-size: 15px; color: var(--muted); }
+  .seg button[aria-pressed="true"] { background: var(--bg); color: var(--text); }
+  .chart-box { background: var(--panel); border-radius: 10px; padding: 8px 4px 4px; }
+  #chart { height: 360px; }
+  #mchart { height: 180px; }
+  .legend { color: var(--muted); font-size: 13px; margin: 8px 2px 0; }
+  .empty { color: var(--muted); font-size: 14px; padding: 24px 12px; text-align: center; }
+
+  /* ---------- mNAV ---------- */
+  .mnav-main { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .mnav-big { font-family: var(--num); font-weight: 600; font-size: 44px; line-height: 1; }
+  .mnav-label { color: var(--muted); font-size: 14px; }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 20px; margin: 16px 0; }
+  .facts div { border-top: 1px solid var(--line); padding-top: 8px; }
+  .facts dt { color: var(--muted); font-size: 13px; }
+  .facts dd { margin: 2px 0 0; font-family: var(--num); font-weight: 600; font-size: 19px; }
+  details { margin-top: 12px; font-size: 14px; }
+  summary { cursor: pointer; color: var(--muted); }
+  .src { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+  .src td { padding: 6px 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .src td:first-child { white-space: nowrap; font-weight: 600; }
+  .src td:nth-child(2) { font-family: var(--num); white-space: nowrap; }
+  .src td:last-child { color: var(--muted); }
+  .table-wrap { overflow-x: auto; }
+
+  /* ---------- 警報 ---------- */
+  .alerts { list-style: none; margin: 0; padding: 0; }
+  .alerts li { padding: 10px 0; border-bottom: 1px solid var(--line); white-space: pre-line; font-size: 14px; }
+  .alerts time { display: block; color: var(--muted); font-size: 12px; font-family: var(--num); }
+
+  footer { margin-top: 36px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div>
+      <div class="pair">BTC／USD</div>
+      <div class="price" id="price">—</div>
+      <div class="sub"><span class="chg" id="chg"></span><span class="live" id="live">連線中</span></div>
+    </div>
+    <div class="updated" id="updated"></div>
+  </header>
+
+  <div class="banners" id="banners"></div>
+
+  <div class="ruler" id="ruler" aria-label="現價和關鍵價位的位置"></div>
+  <p class="ruler-caption" id="rulerCaption"></p>
+
+  <section aria-labelledby="h-signals">
+    <h2 id="h-signals">指標排行</h2>
+    <ol class="signals" id="signals"></ol>
+  </section>
+
+  <section aria-labelledby="h-chart">
+    <div class="chart-head">
+      <h2 id="h-chart">K 線</h2>
+      <div class="seg" role="group" aria-label="切換週期">
+        <button type="button" data-tf="4h" aria-pressed="false">4H</button>
+        <button type="button" data-tf="1d" aria-pressed="true">日</button>
+        <button type="button" data-tf="1w" aria-pressed="false">週</button>
+      </div>
+    </div>
+    <div class="chart-box"><div id="chart"></div></div>
+    <p class="legend">虛線是價位。淡色底是季度時間窗口，由深到淺依序是換季日、交割日、10 日到 20 日。</p>
+  </section>
+
+  <section aria-labelledby="h-mnav">
+    <h2 id="h-mnav">mNAV 與 Net BPS</h2>
+    <div id="mnav"></div>
+    <div class="chart-box" style="margin-top:12px"><div id="mchart"></div></div>
+    <div id="snap"></div>
+  </section>
+
+  <section aria-labelledby="h-alerts">
+    <h2 id="h-alerts">最近警報</h2>
+    <ul class="alerts" id="alerts"></ul>
+  </section>
+
+  <footer>
+    資料來源：Coinbase（BTC）、Yahoo 或 Stooq（MSTR，延遲報價）、Strategy 申報文件。
+    頁面上的 BTC 價格即時更新，其他數據約每 15 分鐘更新一次。
+    指標依「2026 第三季度簡報」的框架計算，只是追蹤工具，不構成投資建議。
+  </footer>
+</main>
+
+<script>
+(() => {
+  const TZ = 8 * 3600;               // 圖表時間軸顯示台北時間
+  const PERIOD = { "4h": 14400, "1d": 86400, "1w": 604800 };
+  const VISIBLE = { "4h": 160, "1d": 180, "1w": 170 };
+  const f0 = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+  const f2 = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const $ = (id) => document.getElementById(id);
+  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const tpe = (ts, withYear) => new Date(ts * 1000).toLocaleString("zh-TW", {
+    timeZone: "Asia/Taipei", hour12: false,
+    year: withYear ? "numeric" : undefined, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+  });
+
+  let DATA = null;
+  let tf = "1d";
+  let live = { price: null, ok: false };
+  let chart = null, S = {}, priceLines = [];
+  let mchart = null, mline = null, mLines = [];
+  const hasLib = typeof window.LightweightCharts !== "undefined";
+
+  // ---------------------------------------------------------------- 讀資料
+  async function load() {
+    try {
+      const r = await fetch("data.json?t=" + Date.now(), { cache: "no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      DATA = await r.json();
+      renderAll();
+    } catch (e) {
+      $("banners").innerHTML = `<div class="banner error">讀不到 data.json（${esc(e.message)}）。在電腦上先跑一次 <b>python3 monitor.py --demo</b>，或到 GitHub 的 Actions 分頁手動執行一次。</div>`;
+    }
+  }
+
+  function currentPrice() {
+    return live.price ?? DATA.btc.price;
+  }
+
+  function renderAll() {
+    renderHeader();
+    renderBanners();
+    renderRuler();
+    renderSignals();
+    renderChart();
+    renderMnav();
+    renderAlerts();
+  }
+
+  // ---------------------------------------------------------------- 頂部
+  function renderHeader() {
+    const p = currentPrice();
+    $("price").textContent = f0.format(p);
+    const c = DATA.btc.change_24h_pct;
+    const chg = $("chg");
+    if (c != null) {
+      const ref = DATA.btc.price / (1 + c / 100);
+      const now = (p / ref - 1) * 100;
+      chg.textContent = (now >= 0 ? "+" : "") + now.toFixed(2) + "%";
+      chg.className = "chg " + (now >= 0 ? "up" : "down");
+      chg.title = "24 小時漲跌";
+    }
+    $("updated").innerHTML = `數據更新<br><span class="num">${esc(tpe(DATA.generated_at))}</span>`;
+  }
+
+  function renderBanners() {
+    const out = [];
+    const ageMin = Math.round((Date.now() / 1000 - DATA.generated_at) / 60);
+    if (DATA.demo) out.push(["info", "這是示範資料。部署到 GitHub 並跑過一次 Actions 後，會換成真實數據。"]);
+    else if (ageMin > 45) out.push(["error", `數據已經 ${ageMin} 分鐘沒更新。到 GitHub 的 Actions 分頁，看排程有沒有失敗。`]);
+    if (DATA.strategy && DATA.strategy.stale) out.push(["warn", `Strategy 持倉快照已經 ${DATA.strategy.age_days} 天沒更新，mNAV 可能不準。更新 config.json 的 strategy_snapshots。`]);
+    if (DATA.mstr && DATA.mstr.stale) out.push(["warn", "這次抓不到 MSTR 股價，mNAV 用的是上一次成功抓到的價格。"]);
+    (DATA.errors || []).forEach((e) => out.push(["warn", "部分數據沒抓到：" + e]));
+    $("banners").innerHTML = out.map(([k, t]) => `<div class="banner ${k}">${esc(t)}</div>`).join("");
+  }
+
+  // ---------------------------------------------------------------- 價位尺
+  function renderRuler() {
+    const p = currentPrice();
+    const levels = [...DATA.levels].sort((a, b) => a.price - b.price);
+    if (!levels.length) { $("ruler").innerHTML = ""; return; }
+    const lo = Math.min(levels[0].price, p) * 0.94;
+    const hi = Math.max(levels[levels.length - 1].price, p) * 1.04;
+    const pos = (v) => ((v - lo) / (hi - lo)) * 100;
+
+    // 區段底色：最低價位以下、價位之間、最高價位以上
+    const edges = [lo, ...levels.map((l) => l.price), hi];
+    const zoneColor = (i) => {
+      if (i === 0) return "var(--zone-stop)";
+      if (i === edges.length - 2) return "var(--zone-up)";
+      if (i === 1 && levels.length > 2) return "var(--zone-risk)";
+      return "var(--zone-mid)";
+    };
+    let track = "";
+    for (let i = 0; i < edges.length - 1; i++) {
+      track += `<span style="width:${pos(edges[i + 1]) - pos(edges[i])}%;background:${zoneColor(i)}"></span>`;
+    }
+
+    // 標籤太近時換到第二排
+    const ruler = $("ruler");
+    const width = ruler.clientWidth || 340;
+    let lastX = -1e9, row = 0, usedSecondRow = false;
+    const ticks = levels.map((l) => {
+      const x = pos(l.price);
+      const px = (x / 100) * width;
+      row = px - lastX < 78 ? (row + 1) % 2 : 0;
+      if (row) usedSecondRow = true;
+      lastX = px;
+      return `<div class="tick" style="left:${x}%"></div>
+        <div class="tick-label" style="left:${x}%;top:${72 + row * 36}px"><b>${f0.format(l.price)}</b>${esc(l.name)}</div>`;
+    }).join("");
+
+    const old = ruler.querySelector(".needle");
+    const startLeft = old ? old.style.left : "0%";
+    ruler.style.paddingBottom = (usedSecondRow ? 100 : 64) + "px";
+    ruler.innerHTML = `<div class="track">${track}</div>${ticks}
+      <div class="needle" style="left:${startLeft}"><span>${f0.format(p)}</span></div>`;
+    const n = ruler.querySelector(".needle");
+    requestAnimationFrame(() => requestAnimationFrame(() => { n.style.left = pos(p) + "%"; }));
+
+    const below = levels.filter((l) => l.price <= p).pop();
+    const above = levels.find((l) => l.price > p);
+    let cap;
+    if (below && above) cap = `現價在${below.name}和${above.name}之間，往上 ${((above.price / p - 1) * 100).toFixed(1)}%，往下 ${((1 - below.price / p) * 100).toFixed(1)}%。`;
+    else if (above) cap = `現價低於所有價位，離${above.name}還有 ${((above.price / p - 1) * 100).toFixed(1)}%。`;
+    else cap = `現價高於所有價位，比${below.name}高 ${((p / below.price - 1) * 100).toFixed(1)}%。`;
+    $("rulerCaption").textContent = cap;
+  }
+
+  // ---------------------------------------------------------------- 指標排行
+  function renderSignals() {
+    $("signals").innerHTML = DATA.signals.map((s) => `
+      <li class="${s.live ? "" : "pending"}">
+        <span class="rank">${s.rank}</span>
+        <span class="sig-name">${esc(s.name)}</span>
+        <span class="sig-value ${s.tone ? "tone-" + s.tone : ""}">${esc(s.value)}</span>
+        <span class="sig-detail">${esc(s.detail || "")}</span>
+      </li>`).join("");
+  }
+
+  // ---------------------------------------------------------------- K 線
+  function theme() {
+    return {
+      layout: { background: { type: "solid", color: "transparent" }, textColor: css("--muted"),
+                fontFamily: "Barlow Semi Condensed, PingFang TC, sans-serif", fontSize: 12 },
+      grid: { vertLines: { color: css("--grid") }, horzLines: { color: css("--grid") } },
+      rightPriceScale: { borderColor: css("--line") },
+      timeScale: { borderColor: css("--line"), timeVisible: true, secondsVisible: false },
+      crosshair: { mode: 0 },
+      localization: { locale: "zh-TW", dateFormat: "yyyy/MM/dd" },
+    };
+  }
+
+  function bucket(t, k) {
+    if (k === "1w") {
+      const d = new Date(t * 1000);
+      const day = (d.getUTCDay() + 6) % 7; // 週一 = 0
+      return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day) / 1000;
+    }
+    return t - (t % PERIOD[k]);
+  }
+
+  function bandsFor(bars, k) {
+    const P = PERIOD[k];
+    const day = (s) => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) / 1000;
+    const segs = [];
+    for (const w of DATA.windows.list) {
+      const marks = [w.rollover, w.expiry, ...w.followups].map(day);
+      const colors = [css("--band1"), css("--band2"), css("--band3")];
+      for (let i = 0; i < marks.length - 1; i++) segs.push([marks[i], marks[i + 1], colors[Math.min(i, 2)]]);
+    }
+    return bars.map((b) => {
+      const seg = segs.find(([a, z]) => b.time < z && b.time + P > a);
+      return seg ? { time: b.time, value: 1, color: seg[2] } : { time: b.time, value: 0, color: "rgba(0,0,0,0)" };
+    });
+  }
+
+  function shifted(k) {
+    return DATA.candles[k].map((b) => ({ ...b, time: b.time + TZ }));
+  }
+
+  function initChart() {
+    const el = $("chart");
+    if (!hasLib) { el.innerHTML = `<div class="empty">圖表元件載入失敗，檢查網路後重新整理。</div>`; return; }
+    chart = LightweightCharts.createChart(el, { autoSize: true, ...theme() });
+    S.bands = chart.addHistogramSeries({ priceScaleId: "bands", lastValueVisible: false, priceLineVisible: false });
+    chart.priceScale("bands").applyOptions({ scaleMargins: { top: 0, bottom: 0 } });
+    S.vol = chart.addHistogramSeries({ priceScaleId: "vol", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
+    chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+    S.candle = chart.addCandlestickSeries({ borderVisible: false });
+    applySeriesColors();
+  }
+
+  function applySeriesColors() {
+    if (!chart) return;
+    const up = css("--up"), down = css("--down");
+    S.candle.applyOptions({ upColor: up, downColor: down, wickUpColor: up, wickDownColor: down });
+    priceLines.forEach((pl) => S.candle.removePriceLine(pl));
+    priceLines = DATA.levels.map((l) => S.candle.createPriceLine({
+      price: l.price, color: css("--btc"), lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed,
+      axisLabelVisible: true, title: l.name,
+    }));
+  }
+
+  function renderChart(keepRange) {
+    if (!chart) initChart();
+    if (!chart) return;
+    const bars = shifted(tf);
+    const range = keepRange ? chart.timeScale().getVisibleLogicalRange() : null;
+    const up = css("--up"), down = css("--down");
+    const alpha = (c) => c.startsWith("#") ? c + "55" : c;
+    S.bands.setData(bandsFor(bars, tf));
+    S.vol.setData(bars.map((b) => ({ time: b.time, value: b.volume, color: alpha(b.close >= b.open ? up : down) })));
+    S.candle.setData(bars.map(({ time, open, high, low, close }) => ({ time, open, high, low, close })));
+    if (range) chart.timeScale().setVisibleLogicalRange(range);
+    else chart.timeScale().setVisibleLogicalRange({ from: bars.length - VISIBLE[tf], to: bars.length + 4 });
+  }
+
+  document.querySelectorAll(".seg button").forEach((btn) => btn.addEventListener("click", () => {
+    tf = btn.dataset.tf;
+    document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+    if (DATA) renderChart(false);
+  }));
+
+  // ---------------------------------------------------------------- mNAV
+  function renderMnav() {
+    const st = DATA.strategy, m = st && st.metrics;
+    if (!st || !m || m.mnav_deck == null) {
+      $("mnav").innerHTML = `<div class="empty">還算不出 mNAV。確認 config.json 有持倉快照，且 MSTR 股價抓得到。</div>`;
+    } else {
+      const ms = DATA.mstr;
+      $("mnav").innerHTML = `
+        <div class="mnav-main"><span class="mnav-big">${m.mnav_deck.toFixed(2)}</span>
+          <span class="mnav-label">簡報算法：MSTR 股價 ÷ Net BPS</span></div>
+        <dl class="facts">
+          <div><dt>企業價值算法（同官方儀表板類型）</dt><dd>${m.mnav_ev.toFixed(2)}</dd></div>
+          <div><dt>舊算法（市值 ÷ BTC 市值）</dt><dd>${m.mnav_old.toFixed(2)}</dd></div>
+          <div><dt>Net BPS</dt><dd>$${f2.format(m.net_bps_usd)}</dd></div>
+          <div><dt>每股淨 BTC</dt><dd>${f0.format(m.net_bps_sats)} 聰</dd></div>
+          <div><dt>MSTR 股價</dt><dd>$${f2.format(ms.price)}</dd></div>
+          <div><dt>股價時間</dt><dd style="font-size:15px">${esc(tpe(ms.time))}<br><span style="font-weight:500;color:var(--muted)">${esc(ms.source)}</span></dd></div>
+        </dl>`;
+    }
+    renderMchart();
+    renderSnapshot();
+  }
+
+  function renderMchart() {
+    const el = $("mchart");
+    const hist = DATA.mnav_history || [];
+    if (!hasLib || hist.length < 2) {
+      if (mchart) { mchart.remove(); mchart = null; mline = null; }
+      el.innerHTML = `<div class="empty">mNAV 走勢會從持倉快照的日期開始累積。想看更早的走勢，在 config.json 補上過去的快照就會自動回填。</div>`;
+      return;
+    }
+    if (!mchart) {
+      el.innerHTML = "";
+      mchart = LightweightCharts.createChart(el, { autoSize: true, ...theme(),
+        timeScale: { borderColor: css("--line"), timeVisible: false } });
+      mline = mchart.addLineSeries({ lineWidth: 2, priceLineVisible: false });
+    }
+    mchart.applyOptions(theme());
+    mchart.applyOptions({ timeScale: { timeVisible: false } });
+    mline.applyOptions({ color: css("--btc") });
+    mLines.forEach((l) => mline.removePriceLine(l));
+    mLines = (DATA.mnav_thresholds || []).map((v) => mline.createPriceLine({
+      price: v, color: css("--muted"), lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed,
+      axisLabelVisible: true, title: String(v),
+    }));
+    mline.setData(hist.map((h) => ({ time: h.time + TZ, value: h.value })));
+    mchart.timeScale().fitContent();
+  }
+
+  function renderSnapshot() {
+    const st = DATA.strategy;
+    if (!st) { $("snap").innerHTML = ""; return; }
+    const src = st.sources || {};
+    const B = (v) => "$" + (v / 1e9).toFixed(2) + "B";
+    const rows = [
+      ["持有 BTC", f0.format(st.btc_holdings), src.btc_holdings],
+      ["流通股數", f0.format(st.shares_outstanding), src.shares_outstanding],
+      ["負債", B(st.debt_usd), src.debt_usd],
+      ["優先股", B(Object.values(st.preferred_usd).reduce((a, b) => a + b, 0)),
+        Object.entries(st.preferred_usd).map(([k, v]) => `${k} ${B(v)}`).join("、") + (src.preferred_usd ? "。" + src.preferred_usd : "")],
+      ["現金", B(st.cash_usd), src.cash_usd],
+    ];
+    $("snap").innerHTML = `
+      <details>
+        <summary>持倉快照 ${esc(st.as_of)}（${st.age_days} 天前），點開看每個數字的來源</summary>
+        <div class="table-wrap"><table class="src"><tbody>
+          ${rows.map(([a, b, c]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td><td>${esc(c || "")}</td></tr>`).join("")}
+        </tbody></table></div>
+      </details>`;
+  }
+
+  // ---------------------------------------------------------------- 警報
+  function renderAlerts() {
+    const list = DATA.alerts || [];
+    $("alerts").innerHTML = list.length
+      ? list.map((a) => `<li><time class="num">${esc(tpe(a.time, true))}</time>${esc(a.text)}</li>`).join("")
+      : `<li class="empty" style="text-align:left;padding-left:0">還沒有警報。價格碰到價位、mNAV 穿越門檻時會出現在這裡，也會發到 Telegram。</li>`;
+  }
+
+  // ---------------------------------------------------------------- 即時價格（Coinbase WebSocket）
+  let lastUi = 0, retry = 0;
+  function setLive(on, text) {
+    live.ok = on;
+    const el = $("live");
+    el.className = "live" + (on ? " on" : "");
+    el.textContent = text;
+  }
+
+  function onTick(price, t) {
+    live.price = price;
+    if (!DATA) return;
+    for (const k of Object.keys(PERIOD)) {
+      const arr = DATA.candles[k];
+      if (!arr || !arr.length) continue;
+      const last = arr[arr.length - 1];
+      const b = bucket(t, k);
+      if (b === last.time) {
+        last.close = price; last.high = Math.max(last.high, price); last.low = Math.min(last.low, price);
+      } else if (b > last.time) {
+        arr.push({ time: b, open: last.close, high: Math.max(last.close, price), low: Math.min(last.close, price), close: price, volume: 0 });
+      }
+    }
+    const now = Date.now();
+    if (now - lastUi < 1000) return;
+    lastUi = now;
+    renderHeader();
+    renderRuler();
+    if (chart) {
+      const arr = DATA.candles[tf];
+      const last = arr[arr.length - 1];
+      S.candle.update({ time: last.time + TZ, open: last.open, high: last.high, low: last.low, close: last.close });
+    }
+  }
+
+  function connectLive() {
+    if (!("WebSocket" in window)) { setLive(false, "瀏覽器不支援即時連線"); return; }
+    let ws;
+    try { ws = new WebSocket("wss://ws-feed.exchange.coinbase.com"); }
+    catch (e) { setLive(false, "即時連線失敗"); return; }
+    ws.onopen = () => {
+      retry = 0;
+      ws.send(JSON.stringify({ type: "subscribe", product_ids: ["BTC-USD"], channels: ["ticker"] }));
+      setLive(true, "即時");
+    };
+    ws.onmessage = (e) => {
+      try {
+        const m = JSON.parse(e.data);
+        if (m.type === "ticker" && m.price) onTick(+m.price, Math.floor(Date.parse(m.time || new Date()) / 1000));
+      } catch (_) { /* 略過格式不對的訊息 */ }
+    };
+    ws.onclose = () => {
+      setLive(false, retry > 2 ? "即時連線中斷，顯示排程數據" : "重新連線中");
+      setTimeout(connectLive, Math.min(30000, 2000 * 2 ** retry++));
+    };
+    ws.onerror = () => ws.close();
+  }
+
+  // ---------------------------------------------------------------- 主題切換、定時重新整理
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (!DATA) return;
+    if (chart) { chart.applyOptions(theme()); applySeriesColors(); renderChart(true); }
+    renderMchart();
+  });
+  window.addEventListener("resize", () => { if (DATA) renderRuler(); });
+
+  setInterval(async () => {
+    try {
+      const r = await fetch("data.json?t=" + Date.now(), { cache: "no-store" });
+      if (!r.ok) return;
+      const fresh = await r.json();
+      if (fresh.generated_at === DATA.generated_at) return;
+      DATA = fresh;
+      renderHeader(); renderBanners(); renderRuler(); renderSignals();
+      renderChart(true); renderMnav(); renderAlerts();
+    } catch (_) { /* 下次再試 */ }
+  }, 5 * 60 * 1000);
+
+  load().then(connectLive);
+})();
+</script>
+</body>
+</html>
