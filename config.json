@@ -1,51 +1,39 @@
 {
   "_說明": "改完存檔、推上 GitHub，下一次排程就會套用。金額單位都是美元。",
-
   "levels": [
     { "price": 88000, "name": "突破確認" },
     { "price": 74900, "name": "激進止損" },
     { "price": 63000, "name": "保守止損" }
   ],
-
   "approach_pct": 1.0,
-  "_approach_pct": "價格距離任一價位在這個百分比以內時，發「接近」警報",
   "approach_cooldown_hours": 12,
-
   "mnav_alert_thresholds": [1.0, 1.22],
-  "_mnav_alert_thresholds": "mNAV（簡報算法）穿越這些數字時發警報。1.22 是 Strategy 在 2026 Q1 財報說的發股增值門檻，原本是用官方算法，這裡只當參考。",
-
   "daily_summary_hour_taipei": 8,
-  "_daily_summary_hour_taipei": "每天台北時間幾點之後發一次摘要。8 點剛好是 BTC 日線收盤。設成 null 就不發。",
-
   "snapshot_stale_days": 8,
-  "_snapshot_stale_days": "Strategy 持倉快照超過幾天沒更新，就發提醒",
-
   "quarter_windows": {
     "rollover_days_before_expiry": 14,
-    "followup_days_of_month": [10, 20],
-    "_說明": "依簡報 p.52 圖上的位置量出來的推測定義：交割日 = 季末月最後一個週五；換季日 = 交割日前 14 天；10、20 = 下個月的 10 日和 20 日。科幣託的定義如果不同，改這裡就好。"
+    "followup_days_of_month": [10, 20]
   },
-
   "strategy_snapshots": [
     {
       "as_of": "2026-10-18",
       "btc_holdings": 848517,
-      "shares_outstanding": 350447872,
+      "shares_outstanding": 384225751,
       "debt_usd": 6714000000,
       "preferred_usd": {
         "STRF": 1284000000,
-        "STRC": 10254000000,
-        "STRE": 896000000,
+        "STRC": 8612000000,
+        "STRE": 905000000,
         "STRK": 1402000000,
         "STRD": 1402000000
       },
       "cash_usd": 5277300000,
       "_資料來源": {
-        "btc_holdings": "2026-10-18，Strategy 8-K（10/19 公布）",
+        "btc_holdings": "2026-10-18，Strategy 8-K",
         "cash_usd": "2026-10-18，USD Reserve 48.3 億 + USD Cash 4.473 億",
-        "debt_usd": "2026-08-10，Strategy STRD 投資人簡報，需要更新",
-        "preferred_usd": "2026-08-10 面額，同一份簡報。STRC 之後持續被回購，實際數字比這裡小，需要更新",
-        "shares_outstanding": "2026-04-26，10-Q 的 A 股 330,807,622 + B 股 19,640,250。之後有 ATM 增發，需要更新"
+        "debt_usd": "2026-08-23，STRD 投資人簡報",
+        "preferred_usd": "STRF、STRE、STRK、STRD 是 2026-08-23 簡報面額；STRC 是推估（8/23 的 99.72 億扣掉之後約 13.6 億回購）",
+        "shares_outstanding": "2026-07-24，10-Q 封面 A 股 364,585,501 + B 股 19,640,250；之後有少量增發"
       }
     }
   ]
