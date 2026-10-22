@@ -1434,6 +1434,1300 @@
       "period_end": "2026-04-12",
       "is_update": true,
       "looks_like_update": true
+    },
+    "0001193125-26-142925": {
+      "filed": "2026-04-06",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526142925/mstr-20260406.htm",
+      "atm": {
+        "STRF": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRC": {
+          "shares": 1027255.0,
+          "notional_m": 102.7,
+          "proceeds_m": 102.6
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 593294.0,
+          "notional_m": 0.0,
+          "proceeds_m": 72.0
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 766970.0,
+        "purchased": 4871.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2026-03-30",
+      "period_end": "2026-03-31",
+      "is_update": true,
+      "looks_like_update": false
+    },
+    "0001193125-26-135765": {
+      "filed": "2026-04-01",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526135765/mstr-20250902.htm",
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-26-130446": {
+      "filed": "2026-03-30",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526130446/mstr-20260223.htm",
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [
+        "看起來是每週更新，但沒解析到持幣表",
+        "沒解析到期間日期"
+      ],
+      "is_update": false,
+      "looks_like_update": true
+    },
+    "0001193125-26-118810": {
+      "filed": "2026-03-23",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526118810/d93392d8k.htm",
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-26-118584": {
+      "filed": "2026-03-23",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526118584/mstr-20260223.htm",
+      "atm": {
+        "STRF": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRC": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 509111.0,
+          "notional_m": 0.0,
+          "proceeds_m": 76.5
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 762099.0,
+        "purchased": 1031.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2026-03-16",
+      "period_end": "2026-03-22",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-26-107263": {
+      "filed": "2026-03-16",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526107263/mstr-20260223.htm",
+      "atm": {
+        "STRF": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRC": {
+          "shares": 11818467.0,
+          "notional_m": 1181.8,
+          "proceeds_m": 1180.4
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 2833668.0,
+          "notional_m": 0.0,
+          "proceeds_m": 396.0
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 761068.0,
+        "purchased": 22337.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2026-03-09",
+      "period_end": "2026-03-15",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-26-097598": {
+      "filed": "2026-03-09",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526097598/d122015d8k.htm",
+      "atm": {
+        "STRF": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRC": {
+          "shares": 3776205.0,
+          "notional_m": 377.6,
+          "proceeds_m": 377.1
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 6327541.0,
+          "notional_m": 0.0,
+          "proceeds_m": 899.5
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 738731.0,
+        "purchased": 17994.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2026-03-02",
+      "period_end": "2026-03-08",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-26-084264": {
+      "filed": "2026-03-02",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526084264/mstr-20260228.htm",
+      "atm": {
+        "STRF": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRC": {
+          "shares": 71590.0,
+          "notional_m": 7.2,
+          "proceeds_m": 7.1
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 1730563.0,
+          "notional_m": 0.0,
+          "proceeds_m": 229.9
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 720737.0,
+        "purchased": 3015.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2026-02-23",
+      "period_end": "2026-03-01",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-26-062489": {
+      "filed": "2026-02-23",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526062489/mstr-20260223.htm",
+      "atm": {
+        "STRF": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRC": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 297940.0,
+          "notional_m": 0.0,
+          "proceeds_m": 39.7
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 717722.0,
+        "purchased": 592.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2026-02-17",
+      "period_end": "2026-02-22",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-26-053105": {
+      "filed": "2026-02-17",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526053105/mstr-20260105.htm",
+      "atm": {
+        "STRF": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRC": {
+          "shares": 785354.0,
+          "notional_m": 78.5,
+          "proceeds_m": 78.4
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 660000.0,
+          "notional_m": 0.0,
+          "proceeds_m": 90.5
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 717131.0,
+        "purchased": 2486.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2026-02-09",
+      "period_end": "2026-02-16",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-26-041944": {
+      "filed": "2026-02-09",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526041944/mstr-20260105.htm",
+      "atm": {
+        "STRF": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRC": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 616715.0,
+          "notional_m": 0.0,
+          "proceeds_m": 89.5
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 714644.0,
+        "purchased": 1142.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2026-02-02",
+      "period_end": "2026-02-08",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001050446-26-000012": {
+      "filed": "2026-02-05",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000105044626000012/mstr-20260205.htm",
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-26-033573": {
+      "filed": "2026-02-02",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526033573/mstr-20260202.htm",
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-26-032731": {
+      "filed": "2026-02-02",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526032731/mstr-20260131.htm",
+      "atm": {
+        "STRF": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRC": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 673527.0,
+          "notional_m": 0.0,
+          "proceeds_m": 106.1
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 713502.0,
+        "purchased": 855.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2026-01-26",
+      "period_end": "2026-02-01",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-26-021726": {
+      "filed": "2026-01-26",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526021726/mstr-20260105.htm",
+      "atm": {
+        "STRF": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRC": {
+          "shares": 70201.0,
+          "notional_m": 7.0,
+          "proceeds_m": 7.0
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 1569770.0,
+          "notional_m": 0.0,
+          "proceeds_m": 257.0
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 712647.0,
+        "purchased": 2932.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2026-01-20",
+      "period_end": "2026-01-25",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-26-016002": {
+      "filed": "2026-01-20",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526016002/mstr-20260105.htm",
+      "atm": {
+        "STRF": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRC": {
+          "shares": 2945371.0,
+          "notional_m": 294.5,
+          "proceeds_m": 294.3
+        },
+        "STRK": {
+          "shares": 38796.0,
+          "notional_m": 3.9,
+          "proceeds_m": 3.4
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 10399650.0,
+          "notional_m": 0.0,
+          "proceeds_m": 1827.3
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 709715.0,
+        "purchased": 22305.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2026-01-12",
+      "period_end": "2026-01-19",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-26-009811": {
+      "filed": "2026-01-12",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526009811/mstr-20260105.htm",
+      "atm": {
+        "STRF": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRC": {
+          "shares": 1192262.0,
+          "notional_m": 119.2,
+          "proceeds_m": 119.1
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 6827695.0,
+          "notional_m": 0.0,
+          "proceeds_m": 1128.5
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 687410.0,
+        "purchased": 13627.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2026-01-05",
+      "period_end": "2026-01-11",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-26-001550": {
+      "filed": "2026-01-05",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526001550/mstr-20260105.htm",
+      "atm": {
+        "STRF": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRC": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 735000.0,
+          "notional_m": 0.0,
+          "proceeds_m": 116.3
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 673783.0,
+        "purchased": 1283.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2025-12-29",
+      "period_end": "2025-12-31",
+      "usd_reserve": 2250000000.0,
+      "usd_cash": 0.0,
+      "is_update": true,
+      "looks_like_update": false
+    },
+    "0001193125-26-000264": {
+      "filed": "2026-01-02",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526000264/mstr-20251117.htm",
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-25-332296": {
+      "filed": "2025-12-29",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525332296/mstr-20251117.htm",
+      "atm": {
+        "STRF": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRC": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 663450.0,
+          "notional_m": 0.0,
+          "proceeds_m": 108.8
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 672497.0,
+        "purchased": 1229.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2025-12-22",
+      "period_end": "2025-12-28",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-25-327598": {
+      "filed": "2025-12-22",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525327598/mstr-20251117.htm",
+      "atm": {
+        "STRF": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRC": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 4535000.0,
+          "notional_m": 0.0,
+          "proceeds_m": 747.8
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 671268.0,
+        "purchased": 0.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2025-12-15",
+      "period_end": "2025-12-21",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-25-318468": {
+      "filed": "2025-12-15",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525318468/mstr-20251117.htm",
+      "atm": {
+        "STRF": {
+          "shares": 163306.0,
+          "notional_m": 16.3,
+          "proceeds_m": 18.0
+        },
+        "STRC": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRK": {
+          "shares": 7036.0,
+          "notional_m": 0.7,
+          "proceeds_m": 0.6
+        },
+        "STRD": {
+          "shares": 1029202.0,
+          "notional_m": 102.9,
+          "proceeds_m": 82.2
+        },
+        "MSTR": {
+          "shares": 4789664.0,
+          "notional_m": 0.0,
+          "proceeds_m": 888.2
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 671268.0,
+        "purchased": 10645.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2025-12-08",
+      "period_end": "2025-12-14",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-25-310607": {
+      "filed": "2025-12-08",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525310607/mstr-20251117.htm",
+      "atm": {
+        "STRF": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRC": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 442536.0,
+          "notional_m": 44.3,
+          "proceeds_m": 34.9
+        },
+        "MSTR": {
+          "shares": 5127684.0,
+          "notional_m": 0.0,
+          "proceeds_m": 928.1
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 660624.0,
+        "purchased": 10624.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2025-12-01",
+      "period_end": "2025-12-07",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-25-303157": {
+      "filed": "2025-12-01",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525303157/d69948d8k.htm",
+      "atm": {
+        "STRF": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRC": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 8214000.0,
+          "notional_m": 0.0,
+          "proceeds_m": 1478.1
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 650000.0,
+        "purchased": 130.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2025-11-17",
+      "period_end": "2025-11-30",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-25-283991": {
+      "filed": "2025-11-17",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525283991/mstr-20251117.htm",
+      "atm": {
+        "STRF": {
+          "shares": 39957.0,
+          "notional_m": 4.0,
+          "proceeds_m": 4.4
+        },
+        "STRC": {
+          "shares": 1313641.0,
+          "notional_m": 131.4,
+          "proceeds_m": 131.2
+        },
+        "STRK": {
+          "shares": 5513.0,
+          "notional_m": 0.6,
+          "proceeds_m": 0.5
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 649870.0,
+        "purchased": 8178.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2025-11-10",
+      "period_end": "2025-11-16",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-25-280178": {
+      "filed": "2025-11-13",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525280178/d205736d8k.htm",
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-25-273310": {
+      "filed": "2025-11-10",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525273310/mstr-20250902.htm",
+      "atm": {
+        "STRF": {
+          "shares": 165614.0,
+          "notional_m": 16.6,
+          "proceeds_m": 18.3
+        },
+        "STRC": {
+          "shares": 262311.0,
+          "notional_m": 26.2,
+          "proceeds_m": 26.2
+        },
+        "STRK": {
+          "shares": 50881.0,
+          "notional_m": 5.1,
+          "proceeds_m": 4.5
+        },
+        "STRD": {
+          "shares": 12800.0,
+          "notional_m": 1.3,
+          "proceeds_m": 1.0
+        },
+        "MSTR": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 641692.0,
+        "purchased": 487.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2025-11-03",
+      "period_end": "2025-11-09",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-25-271105": {
+      "filed": "2025-11-07",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525271105/d78313d8k.htm",
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-25-263914": {
+      "filed": "2025-11-04",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525263914/d70243d8k.htm",
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-25-262819": {
+      "filed": "2025-11-03",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525262819/d79833d8k.htm",
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-25-261714": {
+      "filed": "2025-11-03",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525261714/mstr-20250902.htm",
+      "atm": {
+        "STRF": {
+          "shares": 76017.0,
+          "notional_m": 7.6,
+          "proceeds_m": 8.4
+        },
+        "STRC": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRK": {
+          "shares": 49374.0,
+          "notional_m": 4.9,
+          "proceeds_m": 4.4
+        },
+        "STRD": {
+          "shares": 29065.0,
+          "notional_m": 2.9,
+          "proceeds_m": 2.3
+        },
+        "MSTR": {
+          "shares": 183501.0,
+          "notional_m": 0.0,
+          "proceeds_m": 54.4
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 641205.0,
+        "purchased": 397.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2025-10-27",
+      "period_end": "2025-11-02",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-25-258690": {
+      "filed": "2025-10-30",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525258690/mstr-20251030.htm",
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-25-250751": {
+      "filed": "2025-10-27",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525250751/mstr-20250902.htm",
+      "atm": {
+        "STRF": {
+          "shares": 175634.0,
+          "notional_m": 17.6,
+          "proceeds_m": 19.4
+        },
+        "STRC": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRK": {
+          "shares": 191404.0,
+          "notional_m": 19.1,
+          "proceeds_m": 17.0
+        },
+        "STRD": {
+          "shares": 87462.0,
+          "notional_m": 8.7,
+          "proceeds_m": 7.0
+        },
+        "MSTR": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 640808.0,
+        "purchased": 390.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2025-10-20",
+      "period_end": "2025-10-26",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-25-243049": {
+      "filed": "2025-10-20",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525243049/mstr-20250902.htm",
+      "atm": {
+        "STRF": {
+          "shares": 100206.0,
+          "notional_m": 10.0,
+          "proceeds_m": 11.2
+        },
+        "STRC": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRK": {
+          "shares": 55001.0,
+          "notional_m": 5.5,
+          "proceeds_m": 5.1
+        },
+        "STRD": {
+          "shares": 32240.0,
+          "notional_m": 3.2,
+          "proceeds_m": 2.6
+        },
+        "MSTR": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 640418.0,
+        "purchased": 168.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2025-10-13",
+      "period_end": "2025-10-19",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-25-238132": {
+      "filed": "2025-10-14",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525238132/mstr-20250902.htm",
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-25-230977": {
+      "filed": "2025-10-06",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525230977/d49048d8k.htm",
+      "atm": {
+        "STRF": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRC": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 640031.0,
+        "purchased": 42706.0,
+        "sold": 0.0
+      },
+      "converts": [
+        {
+          "principal": 3000000000.0,
+          "notes": "0% convertible senior notes",
+          "kind": "pricing"
+        },
+        {
+          "principal": 2000000000.0,
+          "notes": "0% convertible senior notes",
+          "kind": "pricing"
+        }
+      ],
+      "warnings": [
+        "ATM STRF 欄位數不符，用推測順序",
+        "ATM STRC 欄位數不符，用推測順序",
+        "ATM STRK 欄位數不符，用推測順序",
+        "ATM STRD 欄位數不符，用推測順序",
+        "ATM MSTR 欄位數不符，用推測順序"
+      ],
+      "period_start": "2025-09-29",
+      "period_end": "2025-10-05",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-25-225904": {
+      "filed": "2025-10-01",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525225904/d807448d8k.htm",
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-25-225038": {
+      "filed": "2025-09-30",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525225038/d939712d8k.htm",
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-25-221772": {
+      "filed": "2025-09-29",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525221772/mstr-20250902.htm",
+      "atm": {
+        "STRF": {
+          "shares": 101713.0,
+          "notional_m": 10.2,
+          "proceeds_m": 11.3
+        },
+        "STRC": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 5000.0,
+          "notional_m": 0.5,
+          "proceeds_m": 0.4
+        },
+        "MSTR": {
+          "shares": 347352.0,
+          "notional_m": 0.0,
+          "proceeds_m": 116.4
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 640031.0,
+        "purchased": 196.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2025-09-22",
+      "period_end": "2025-09-28",
+      "is_update": true,
+      "looks_like_update": true
+    },
+    "0001193125-25-210048": {
+      "filed": "2025-09-22",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525210048/mstr-20250902.htm",
+      "atm": {
+        "STRF": {
+          "shares": 173834.0,
+          "notional_m": 17.4,
+          "proceeds_m": 19.4
+        },
+        "STRC": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 227401.0,
+          "notional_m": 0.0,
+          "proceeds_m": 80.6
+        }
+      },
+      "repurchase": {},
+      "btc": {
+        "holdings": 639835.0,
+        "purchased": 850.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2025-09-15",
+      "period_end": "2025-09-21",
+      "is_update": true,
+      "looks_like_update": true
     }
   },
   "reports": {
@@ -1478,8 +2772,50 @@
           }
         }
       }
+    },
+    "0001050446-26-000031": {
+      "form": "10-Q",
+      "filed": "2026-05-06",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000105044626000031/mstr-20260331.htm",
+      "report_date": "2026-03-31",
+      "warnings": [],
+      "shares": {
+        "as_of": "2026-04-26",
+        "value": 350447872,
+        "class_a": 330807622,
+        "class_b": 19640250
+      },
+      "debt": {
+        "as_of": "2026-03-31",
+        "value": 8250000000.0
+      },
+      "preferred": {
+        "as_of": "2026-03-31",
+        "series": {
+          "STRF": {
+            "value": 1283969000.0,
+            "eur": false
+          },
+          "STRC": {
+            "value": 5024651000.0,
+            "eur": false
+          },
+          "STRE": {
+            "value": 775000000.0,
+            "eur": true
+          },
+          "STRK": {
+            "value": 1402074000.0,
+            "eur": false
+          },
+          "STRD": {
+            "value": 1402422000.0,
+            "eur": false
+          }
+        }
+      }
     }
   },
-  "checked_at": 1792634022,
-  "backlog_8k": 40
+  "checked_at": 1792634135,
+  "backlog_8k": 0
 }
