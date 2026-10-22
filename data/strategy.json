@@ -3,6 +3,7 @@
     "0001193125-26-424688": {
       "filed": "2026-10-19",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526424688/mstr-20261019.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -69,6 +70,7 @@
     "0001193125-26-423400": {
       "filed": "2026-10-16",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526423400/mstr-20261015.htm",
+      "v": 2,
       "atm": {},
       "repurchase": {},
       "btc": {},
@@ -80,6 +82,7 @@
     "0001193125-26-419726": {
       "filed": "2026-10-13",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526419726/mstr-20261012.htm",
+      "v": 2,
       "atm": {},
       "repurchase": {},
       "btc": {},
@@ -91,6 +94,7 @@
     "0001193125-26-413164": {
       "filed": "2026-10-05",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526413164/mstr-20261005.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -157,6 +161,7 @@
     "0001193125-26-409863": {
       "filed": "2026-10-01",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526409863/mstr-20260930.htm",
+      "v": 2,
       "atm": {},
       "repurchase": {},
       "btc": {},
@@ -168,6 +173,7 @@
     "0001193125-26-403417": {
       "filed": "2026-09-28",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526403417/mstr-20260914.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -234,6 +240,7 @@
     "0001193125-26-401636": {
       "filed": "2026-09-25",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526401636/mstr-20260924.htm",
+      "v": 2,
       "atm": {},
       "repurchase": {},
       "btc": {},
@@ -245,6 +252,7 @@
     "0001193125-26-396093": {
       "filed": "2026-09-21",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526396093/mstr-20260914.htm",
+      "v": 2,
       "atm": {},
       "repurchase": {
         "STRF": {
@@ -285,6 +293,7 @@
     "0001193125-26-389858": {
       "filed": "2026-09-14",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526389858/mstr-20260914.htm",
+      "v": 2,
       "atm": {},
       "repurchase": {
         "STRF": {
@@ -323,6 +332,7 @@
     "0001193125-26-384402": {
       "filed": "2026-09-08",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526384402/mstr-20260831.htm",
+      "v": 2,
       "atm": {},
       "repurchase": {
         "STRF": {
@@ -361,6 +371,7 @@
     "0001193125-26-377583": {
       "filed": "2026-09-01",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526377583/mstr-20260831.htm",
+      "v": 2,
       "atm": {},
       "repurchase": {},
       "btc": {},
@@ -372,6 +383,7 @@
     "0001193125-26-375463": {
       "filed": "2026-08-31",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526375463/mstr-20260831.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -438,6 +450,7 @@
     "0001193125-26-361845": {
       "filed": "2026-08-24",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526361845/mstr-20260824.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -502,6 +515,7 @@
     "0001193125-26-353240": {
       "filed": "2026-08-17",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526353240/mstr-20260817.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -566,6 +580,7 @@
     "0001193125-26-341297": {
       "filed": "2026-08-10",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526341297/mstr-20260810.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -630,6 +645,7 @@
     "0001193125-26-329565": {
       "filed": "2026-08-03",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526329565/mstr-20260803.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -694,6 +710,7 @@
     "0001050446-26-000036": {
       "filed": "2026-07-31",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000105044626000036/mstr-20260730.htm",
+      "v": 2,
       "atm": {},
       "repurchase": {},
       "btc": {},
@@ -705,6 +722,7 @@
     "0001628280-26-051027": {
       "filed": "2026-07-30",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000162828026051027/mstr-20260730.htm",
+      "v": 2,
       "atm": {},
       "repurchase": {},
       "btc": {},
@@ -716,6 +734,7 @@
     "0001193125-26-316917": {
       "filed": "2026-07-27",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526316917/mstr-20260727.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -780,6 +799,7 @@
     "0001193125-26-308369": {
       "filed": "2026-07-20",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526308369/mstr-20260720.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -823,6 +843,7 @@
     "0001193125-26-301483": {
       "filed": "2026-07-13",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526301483/mstr-20260713.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -866,6 +887,7 @@
     "0001193125-26-295586": {
       "filed": "2026-07-06",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526295586/mstr-20260706.htm",
+      "v": 2,
       "atm": {},
       "repurchase": {},
       "btc": {
@@ -885,6 +907,7 @@
     "0001193125-26-286871": {
       "filed": "2026-06-29",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526286871/mstr-20260629.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -928,6 +951,7 @@
     "0001193125-26-276717": {
       "filed": "2026-06-22",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526276717/mstr-20260504.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -971,6 +995,7 @@
     "0001193125-26-270366": {
       "filed": "2026-06-15",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526270366/d144149d8k.htm",
+      "v": 2,
       "atm": {},
       "repurchase": {},
       "btc": {},
@@ -982,6 +1007,7 @@
     "0001193125-26-270311": {
       "filed": "2026-06-15",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526270311/mstr-20260504.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -1025,6 +1051,7 @@
     "0001193125-26-265108": {
       "filed": "2026-06-10",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526265108/d152189d8k.htm",
+      "v": 2,
       "atm": {},
       "repurchase": {},
       "btc": {},
@@ -1036,6 +1063,7 @@
     "0001193125-26-261038": {
       "filed": "2026-06-08",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526261038/d130937d8k.htm",
+      "v": 2,
       "atm": {},
       "repurchase": {},
       "btc": {},
@@ -1047,6 +1075,7 @@
     "0001193125-26-260709": {
       "filed": "2026-06-08",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526260709/mstr-20260504.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -1090,6 +1119,7 @@
     "0001193125-26-249768": {
       "filed": "2026-06-01",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526249768/mstr-20260530.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -1133,6 +1163,7 @@
     "0001193125-26-237907": {
       "filed": "2026-05-26",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526237907/mstr-20260526.htm",
+      "v": 2,
       "atm": {},
       "repurchase": {},
       "btc": {},
@@ -1147,6 +1178,7 @@
     "0001193125-26-227918": {
       "filed": "2026-05-18",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526227918/mstr-20260504.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -1190,6 +1222,7 @@
     "0001193125-26-225361": {
       "filed": "2026-05-15",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526225361/mstr-20260504.htm",
+      "v": 2,
       "atm": {},
       "repurchase": {},
       "btc": {},
@@ -1201,6 +1234,7 @@
     "0001193125-26-215754": {
       "filed": "2026-05-11",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526215754/mstr-20260504.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -1244,6 +1278,7 @@
     "0001050446-26-000024": {
       "filed": "2026-05-05",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000105044626000024/mstr-20260505.htm",
+      "v": 2,
       "atm": {},
       "repurchase": {},
       "btc": {},
@@ -1255,6 +1290,7 @@
     "0001193125-26-202611": {
       "filed": "2026-05-04",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526202611/mstr-20260504.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -1298,6 +1334,7 @@
     "0001193125-26-199155": {
       "filed": "2026-05-01",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526199155/mstr-20250902.htm",
+      "v": 2,
       "atm": {},
       "repurchase": {},
       "btc": {},
@@ -1309,6 +1346,7 @@
     "0001193125-26-178994": {
       "filed": "2026-04-27",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526178994/mstr-20260223.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -1352,6 +1390,7 @@
     "0001193125-26-162756": {
       "filed": "2026-04-20",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526162756/mstr-20260223.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -1395,6 +1434,7 @@
     "0001193125-26-152015": {
       "filed": "2026-04-13",
       "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526152015/mstr-20260223.htm",
+      "v": 2,
       "atm": {
         "STRF": {
           "shares": 0.0,
@@ -2814,8 +2854,28 @@
           }
         }
       }
+    },
+    "0001050446-26-000020": {
+      "form": "10-K",
+      "filed": "2026-02-19",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000105044626000020/mstr-20251231.htm",
+      "report_date": "2025-12-31",
+      "warnings": [
+        "沒找到優先股面額表"
+      ],
+      "shares": {
+        "as_of": "2026-02-13",
+        "value": 333752708,
+        "class_a": 314112458,
+        "class_b": 19640250
+      },
+      "debt": {
+        "as_of": "2025-12-31",
+        "value": 8250000000.0
+      }
     }
   },
-  "checked_at": 1792634135,
-  "backlog_8k": 0
+  "checked_at": 1792636132,
+  "backlog_8k": 0,
+  "reparse_left": 40
 }
