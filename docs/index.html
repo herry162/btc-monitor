@@ -131,12 +131,16 @@
   .chart-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
   .chart-head h2 { margin: 0; }
   .seg { display: inline-flex; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
-  .seg button { border: 0; background: transparent; padding: 5px 14px; border-radius: 6px; cursor: pointer; font-family: var(--num); font-weight: 600; font-size: 15px; color: var(--muted); }
+  .seg button { border: 0; background: transparent; padding: 5px 12px; white-space: nowrap; border-radius: 6px; cursor: pointer; font-family: var(--num); font-weight: 600; font-size: 15px; color: var(--muted); }
   .seg button[aria-pressed="true"] { background: var(--bg); color: var(--text); }
   .chart-box { background: var(--panel); border-radius: 10px; padding: 8px 4px 4px; }
   #chart { height: 360px; }
   #mchart { height: 180px; }
   #fchart { height: 200px; }
+  #echart { height: 260px; }
+  .etf-info { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 14px; margin: 0 2px 8px; min-height: 22px; }
+  .etf-info .d { color: var(--muted); }
+  .etf-info b { font-weight: 600; }
   .fin-list { list-style: none; margin: 12px 0 0; padding: 0; }
   .fin-list li { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
   .fin-list b { font-family: var(--num); font-weight: 600; }
@@ -217,13 +221,27 @@
     <div id="fin"></div>
   </section>
 
+  <section aria-labelledby="h-etf">
+    <div class="chart-head">
+      <h2 id="h-etf">現貨 ETF 資金流</h2>
+      <div class="seg" role="group" aria-label="切換區間" id="eseg">
+        <button type="button" data-r="90" aria-pressed="false">3M</button>
+        <button type="button" data-r="365" aria-pressed="true">1Y</button>
+        <button type="button" data-r="all" aria-pressed="false">全部</button>
+      </div>
+    </div>
+    <div class="etf-info num" id="etip"></div>
+    <div class="chart-box"><div id="echart"></div></div>
+    <p class="legend" id="elegend"></p>
+  </section>
+
   <section aria-labelledby="h-alerts">
     <h2 id="h-alerts">最近警報</h2>
     <ul class="alerts" id="alerts"></ul>
   </section>
 
   <footer>
-    資料來源：Coinbase（BTC）、Nasdaq 官方成交經 Yahoo（MSTR 開盤時段、IBIT）、Binance／Hyperliquid MSTR 永續合約（美股休市時的 24 小時參考價）、SEC EDGAR（Strategy 8-K 與季報）、Farside（ETF 資金流）、CoinGecko（BTC.D）。
+    資料來源：Coinbase（BTC）、Nasdaq 官方成交經 Yahoo（MSTR 開盤時段、IBIT）、Binance／Hyperliquid MSTR 永續合約（美股休市時的 24 小時參考價）、SEC EDGAR（Strategy 8-K 與季報）、SoSoValue（ETF 資金流）、CoinGecko（BTC.D）。
     頁面上的 BTC 價格即時更新，其他數據約每 15 分鐘更新一次。
     指標依「2026 第三季度簡報」的框架計算，只是追蹤工具，不構成投資建議。
   </footer>
@@ -251,6 +269,7 @@
   let chart = null, S = {}, priceLines = [];
   let mchart = null, mline = null, mLines = [];
   let fchart = null, fbars = null, fLine = null;
+  let echart = null, ebars = null, eline = null, eRange = "365", eBy = {}, eBtc = {}, eLast = null;
   const hasLib = typeof window.LightweightCharts !== "undefined";
 
   // ---------------------------------------------------------------- 讀資料
@@ -277,6 +296,7 @@
     renderChart();
     renderMnav();
     renderFinancing();
+    renderEtf();
     renderAlerts();
   }
 
@@ -603,6 +623,75 @@
     $("fin").innerHTML = `<ul class="fin-list">${lines.join("")}</ul>`;
   }
 
+  // ---------------------------------------------------------------- ETF 資金流圖
+  const sgnM = (v) => (v > 0 ? "+" : v < 0 ? "−" : "") + fmtM(Math.abs(v));
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const dkey = (t) => typeof t === "string" ? t
+    : (t && typeof t === "object") ? `${t.year}-${pad2(t.month)}-${pad2(t.day)}`
+    : new Date(t * 1000).toISOString().slice(0, 10);
+
+  function showEtfInfo(d) {
+    const day = d || eLast;
+    const r = eBy[day], px = eBtc[day];
+    if (!day) { $("etip").innerHTML = ""; return; }
+    const flow = r ? `<b class="${r.total >= 0 ? "tone-up" : "tone-down"}">${r.total >= 0 ? "流入" : "流出"} ${sgnM(r.total)}</b>` : `<span class="d">休市</span>`;
+    $("etip").innerHTML = `<span class="d">${esc(day)}</span>${px ? `<span>BTC $${f0.format(px)}</span>` : ""}${flow}${r && r.aum_b ? `<span>總資產淨值 $${r.aum_b.toFixed(1)}B</span>` : ""}`;
+  }
+
+  function applyEtfRange() {
+    if (!echart || !eLast) return;
+    if (eRange === "all") { echart.timeScale().fitContent(); return; }
+    const to = new Date(eLast + "T00:00:00Z");
+    const from = new Date(to.getTime() - (+eRange) * 86400000);
+    echart.timeScale().setVisibleRange({ from: from.toISOString().slice(0, 10), to: eLast });
+  }
+
+  function renderEtf() {
+    const e = DATA.etf || {};
+    const hist = e.history || [];
+    const el = $("echart");
+    if (!hist.length) {
+      if (echart) { echart.remove(); echart = null; ebars = null; eline = null; }
+      el.innerHTML = `<div class="empty">還沒有 ETF 資金流數據。設定 SOSOVALUE_API_KEY 後，下一次執行就會補上。</div>`;
+      $("etip").innerHTML = ""; $("elegend").textContent = "";
+      return;
+    }
+    eBy = {}; hist.forEach((r) => { eBy[r.date] = r; });
+    eLast = hist[hist.length - 1].date;
+    const first = hist[0].date;
+    const btc = (DATA.candles["1d"] || []).map((b) => ({ time: dkey(b.time), value: b.close }))
+      .filter((p) => p.time >= first);
+    eBtc = {}; btc.forEach((p) => { eBtc[p.time] = p.value; });
+    if (hasLib) {
+      if (!echart) {
+        el.innerHTML = "";
+        echart = LightweightCharts.createChart(el, { autoSize: true, ...theme(),
+          leftPriceScale: { visible: true, borderColor: css("--line") },
+          timeScale: { borderColor: css("--line"), timeVisible: false } });
+        ebars = echart.addHistogramSeries({ priceScaleId: "left", lastValueVisible: false, priceLineVisible: false,
+          priceFormat: { type: "custom", formatter: (v) => sgnM(v), minMove: 1 } });
+        eline = echart.addLineSeries({ priceScaleId: "right", lineWidth: 2, priceLineVisible: false });
+        echart.subscribeCrosshairMove((p) => showEtfInfo(p && p.time ? dkey(p.time) : null));
+      }
+      echart.applyOptions(theme());
+      echart.applyOptions({ leftPriceScale: { visible: true, borderColor: css("--line") }, timeScale: { timeVisible: false } });
+      const up = css("--up"), down = css("--down");
+      ebars.setData(hist.map((r) => ({ time: r.date, value: r.total, color: r.total >= 0 ? up : down })));
+      eline.applyOptions({ color: css("--btc") });
+      eline.setData(btc);
+      applyEtfRange();
+    }
+    showEtfInfo(null);
+    const n = hist.length, since = first.replace(/-/g, "/");
+    $("elegend").textContent = `綠色是淨流入、紅色是淨流出（左軸），橘線是 BTC 價格（右軸）。資料從 ${since} 起共 ${n} 個交易日，來源 ${e.source || "SoSoValue"}，之後每天自動累積。點圖表可以看單日數字。`;
+  }
+
+  document.querySelectorAll("#eseg button").forEach((btn) => btn.addEventListener("click", () => {
+    eRange = btn.dataset.r;
+    document.querySelectorAll("#eseg button").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+    applyEtfRange();
+  }));
+
   // ---------------------------------------------------------------- 警報
   function renderAlerts() {
     const list = DATA.alerts || [];
@@ -677,6 +766,7 @@
     if (chart) { chart.applyOptions(theme()); applySeriesColors(); renderChart(true); }
     renderMchart();
     if (fchart) { fchart.remove(); fchart = null; fbars = null; fLine = null; renderFinancing(); }
+    if (echart) { echart.remove(); echart = null; ebars = null; eline = null; renderEtf(); }
   });
   window.addEventListener("resize", () => { if (DATA) renderRuler(); });
 
@@ -688,7 +778,7 @@
       if (fresh.generated_at === DATA.generated_at) return;
       DATA = fresh;
       renderHeader(); renderBanners(); renderRuler(); renderSignals();
-      renderChart(true); renderMnav(); renderFinancing(); renderAlerts();
+      renderChart(true); renderMnav(); renderFinancing(); renderEtf(); renderAlerts();
     } catch (_) { /* 下次再試 */ }
   }, 5 * 60 * 1000);
 
