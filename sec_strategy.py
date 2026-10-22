@@ -20,6 +20,7 @@ import zlib
 from html.parser import HTMLParser
 
 CIK = "0001050446"
+PARSER_VERSION = 2  # 解析規則改版時加 1，舊的解析結果會在背景逐步重抓
 SERIES = ("STRF", "STRC", "STRE", "STRK", "STRD")
 ROW_RE = re.compile(r"^(STRF|STRC|STRK|STRD|STRE|MSTR)\b")
 DATE_PAT = r"([A-Z][a-z]+ \d{1,2}, \d{4})"
@@ -204,23 +205,30 @@ def parse_8k(html):
             out["usd_reserve"] = _money(m.group(1), m.group(2))
             out["usd_cash"] = 0.0
 
+    # 可轉債：只看「金額所在的那一句」判斷是定價、完成、提議還是贖回，避免整份文件的字眼誤判
     for m in re.finditer(r"\$\s?([\d.,]+)\s*(billion|million)\s+aggregate principal amount of"
-                         r"\s+(?:its\s+|our\s+)?([^.;]{0,80}?)convertible senior notes", text, re.I):
-        out["converts"].append({"principal": _money(m.group(1), m.group(2)),
-                                "notes": _clean(m.group(3) + "convertible senior notes")})
-    if out["converts"]:
-        if re.search(r"\bpric(?:ed|ing)\b", text, re.I):
+                         r"\s+(?:its\s+|our\s+|the\s+)?([^.;]{0,80}?)convertible senior notes", text, re.I):
+        a = text.rfind(". ", 0, m.start()) + 1
+        b = text.find(". ", m.end())
+        sent = text[a:(b if b != -1 else len(text))]
+        if re.search(r"\bpric(?:ed|ing)\b|\bupsized\b", sent, re.I):
             kind = "pricing"
-        elif re.search(r"\bproposed\b", text, re.I):
-            kind = "proposed"
-        elif re.search(r"\b(?:closing|closed|completed)\b", text, re.I):
+        elif re.search(r"\b(?:closed|closing of|completed|completion of)\b", sent, re.I):
             kind = "closing"
-        elif re.search(r"repurchas|redeem|redemption|exchang|settle", text, re.I):
+        elif re.search(r"\bpropos(?:ed|es|al)\b|\bintends? to offer\b", sent, re.I):
+            kind = "proposed"
+        elif re.search(r"\b(?:redeem\w*|redemption|repurchas\w*|exchang\w*|settle\w*|conversion|converted|called)\b",
+                       sent, re.I):
             kind = "retire"
         else:
-            kind = "other"
-        for c in out["converts"]:
-            c["kind"] = kind
+            kind = "mention"
+        out["converts"].append({"principal": _money(m.group(1), m.group(2)), "kind": kind,
+                                "notes": _clean(m.group(3) + "convertible senior notes")})
+    # 同一份文件的發行只算一次（例如另外提到超額配售選擇權），取最大金額
+    issues = [c for c in out["converts"] if c["kind"] in ("pricing", "closing")]
+    if len(issues) > 1:
+        keep = max(issues, key=lambda c: c["principal"])
+        out["converts"] = [c for c in out["converts"] if c not in issues or c is keep]
 
     out["is_update"] = bool(out["atm"] or out["btc"] or "usd_reserve" in out)
     out["looks_like_update"] = bool(re.search(r"\b(ATM Update|BTC Update)\b", text))
@@ -362,9 +370,21 @@ def update(store, user_agent, today, log, max_8k=40, max_reports=1, lookback_day
         except Exception as e:  # 單一份失敗不影響其他
             log(f"8-K {f['filed']} 解析失敗：{e}")
             continue
-        rec = {"filed": f["filed"], "url": Edgar.url(f), **p}
+        rec = {"filed": f["filed"], "url": Edgar.url(f), "v": PARSER_VERSION, **p}
         store["filings"][f["accession"]] = rec
         new.append(rec)
+
+    # 舊版規則解析的申報：用剩下的額度重新解析（不發通知）
+    room = max(0, max_8k - len(eightk[:max_8k]))
+    stale = [(acc, f) for acc, f in store["filings"].items() if f.get("v", 1) < PARSER_VERSION and f.get("url")]
+    stale.sort(key=lambda kv: kv[1]["filed"], reverse=True)
+    for acc, f in stale[:room]:
+        try:
+            p = parse_8k(ed.get(f["url"]))
+            store["filings"][acc] = {"filed": f["filed"], "url": f["url"], "v": PARSER_VERSION, **p}
+        except Exception as e:
+            log(f"8-K {f['filed']} 重新解析失敗：{e}")
+    store["reparse_left"] = max(0, len(stale) - room)
 
     reports = [f for f in listing if f["form"] in ("10-Q", "10-K")]
     reports.sort(key=lambda f: f["report_date"], reverse=True)

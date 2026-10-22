@@ -17,7 +17,8 @@
 
   "strategy_auto": {
     "enabled": true,
-    "sec_user_agent": "btc-monitor herry162@users.noreply.github.com",
+    "sec_user_agent": "",
+    "_sec_user_agent": "留空就好。SEC 要求名字和真實 email，放在 GitHub Secret 的 SEC_USER_AGENT 比較不會公開",
     "fallback_anchor": {
       "_說明": "季報解析失敗時才用。之後每週 8-K 的增發、回購會自動加減上去。",
       "shares": { "as_of": "2026-07-24", "value": 384225751 },
@@ -52,6 +53,12 @@
     "crash_btc_pct": 5
   },
   "etf": { "alert_daily_usd_m": 500 },
+  "mstr_24h": {
+    "enabled": true,
+    "official_fresh_minutes": 20,
+    "venues": ["binance", "hyperliquid"],
+    "_說明": "美股開盤（含盤前盤後）用 Nasdaq 官方成交價；休市時改用這些永續合約裡 24 小時成交量最大的一家"
+  },
   "eur_usd": 1.16,
 
   "strategy_snapshots": [

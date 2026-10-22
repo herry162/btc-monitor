@@ -97,6 +97,14 @@ def http_json(url, **kw):
     return json.loads(http_get(url, **kw))
 
 
+def http_post_json(url, payload, headers=None, timeout=20):
+    h = {"User-Agent": UA, "Content-Type": "application/json", "Accept": "application/json"}
+    h.update(headers or {})
+    req = urllib.request.Request(url, data=json.dumps(payload).encode(), headers=h)
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
 def load_json(path, default):
     try:
         with open(path, encoding="utf-8") as f:
@@ -203,6 +211,78 @@ def mstr_yahoo():
         raise RuntimeError("Yahoo 沒有回傳 MSTR 價格")
     return {"price": float(price), "time": int(meta.get("regularMarketTime") or now_ts()),
             "source": "Yahoo（約延遲 15 分鐘）", "history": hist}
+
+
+def mstr_official_latest():
+    """官方市場最新成交（含盤前 04:00 與盤後到 20:00 ET），Yahoo 一分鐘線"""
+    url = "https://query1.finance.yahoo.com/v8/finance/chart/MSTR?range=1d&interval=1m&includePrePost=true"
+    r = http_json(url)["chart"]["result"][0]
+    ts = r.get("timestamp") or []
+    closes = r["indicators"]["quote"][0].get("close") or []
+    for t, c in reversed(list(zip(ts, closes))):
+        if c is not None:
+            return {"price": float(c), "time": int(t)}
+    raise RuntimeError("Yahoo 一分鐘線沒有資料")
+
+
+def perp_binance():
+    j = http_json("https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=MSTRUSDT", timeout=10, retries=0)
+    return {"venue": "Binance MSTRUSDT 永續", "price": float(j["lastPrice"]),
+            "volume_24h_usd": float(j.get("quoteVolume") or 0), "time": int(j["closeTime"]) // 1000}
+
+
+def perp_hyperliquid():
+    meta, ctxs = http_post_json("https://api.hyperliquid.xyz/info", {"type": "metaAndAssetCtxs", "dex": "xyz"})
+    for u, c in zip(meta.get("universe", []), ctxs):
+        if u.get("name") in ("xyz:MSTR", "MSTR"):
+            px = c.get("midPx") or c.get("markPx")
+            return {"venue": "Hyperliquid xyz:MSTR 永續", "price": float(px),
+                    "volume_24h_usd": float(c.get("dayNtlVlm") or 0), "time": now_ts()}
+    raise RuntimeError("Hyperliquid 找不到 xyz:MSTR")
+
+
+def mstr_quote(cfg, errors):
+    """官方市場有最新成交就用官方價（最合規）；休市時改用 24 小時永續合約中成交量最大的一家"""
+    mc = cfg.get("mstr_24h", {})
+    fresh_s = float(mc.get("official_fresh_minutes", 20)) * 60
+    hist = None
+    for fn in (mstr_yahoo, mstr_stooq):
+        try:
+            hist = fn()
+            break
+        except Exception as e:
+            errors.append(f"MSTR（{fn.__name__}）：{e}")
+    official = None
+    try:
+        official = mstr_official_latest()
+    except Exception:
+        if hist:
+            official = {"price": hist["price"], "time": hist["time"]}
+    perps = []
+    if mc.get("enabled", True):
+        for name in mc.get("venues", ["binance", "hyperliquid"]):
+            fn = {"binance": perp_binance, "hyperliquid": perp_hyperliquid}.get(name)
+            if not fn:
+                continue
+            try:
+                perps.append(fn())
+            except Exception:
+                pass  # 某家連不上（例如 Binance 擋美國伺服器）就略過
+    perp = max(perps, key=lambda p: p["volume_24h_usd"]) if perps else None
+    if not official and not perp:
+        return None
+    now = now_ts()
+    if official and now - official["time"] <= fresh_s:
+        price, kind, source, t = official["price"], "official", "Nasdaq 官方成交（Yahoo，含盤前盤後）", official["time"]
+    elif perp:
+        price, kind, source, t = perp["price"], "perp", f"{perp['venue']}（美股休市，24 小時參考價）", perp["time"]
+    else:
+        price, kind, source, t = official["price"], "official_stale", "Nasdaq 官方最後成交（休市中）", official["time"]
+    out = {"price": price, "time": t, "source": source, "kind": kind,
+           "history": (hist or {}).get("history", []), "official": official, "perp": perp, "perps": perps}
+    if official and perp:
+        out["premium_pct"] = round((perp["price"] / official["price"] - 1) * 100, 2)
+    return out
 
 
 def mstr_stooq():
@@ -420,7 +500,7 @@ def check_approach(alerter, levels, price, threshold, cooldown_h):
                 f"現價 {usd(price)}，在價位{side} {dist:.2f}%"))
 
 
-def check_mnav(alerter, state, m, thresholds, btc, mstr):
+def check_mnav(alerter, state, m, thresholds, btc, mstr, note=""):
     last = state.get("last_mnav")
     if m is not None and last is not None:
         for th in thresholds:
@@ -434,7 +514,7 @@ def check_mnav(alerter, state, m, thresholds, btc, mstr):
             if alerter.cooldown_ok(key, 12):
                 alerter.push(key, (
                     f"mNAV {verb} {th}（簡報算法）\n"
-                    f"目前 {m:.3f}，MSTR {mstr:.2f}，BTC {usd(btc)}"))
+                    f"目前 {m:.3f}，MSTR {mstr:.2f}{note}，BTC {usd(btc)}"))
     if m is not None:
         state["last_mnav"] = m
 
@@ -481,6 +561,79 @@ def _farside_rows_from_markdown(md):
                 d = dt.datetime.strptime(cells[0], "%d %b %Y").date().isoformat()
                 rows.append({"date": d, "total": _paren_num(cells[i_t]), "ibit": _paren_num(cells[i_i])})
     return rows[-30:]
+
+
+def _find_flow_rows(obj):
+    """在 SoSoValue 回傳的 JSON 裡找出「日期 + 淨流入」的列，不依賴固定欄位名稱"""
+    if isinstance(obj, list) and obj and isinstance(obj[0], dict):
+        keys = obj[0].keys()
+        dk = next((k for k in keys if k.lower() in ("date", "trade_date", "tradedate", "day")), None)
+        nk = next((k for k in keys if re.search(r"net.?inflow", k, re.I) and not re.search(r"cum", k, re.I)), None)
+        if dk and nk:
+            return obj, dk, nk
+    if isinstance(obj, dict):
+        for v in obj.values():
+            r = _find_flow_rows(v)
+            if r:
+                return r
+    if isinstance(obj, list):
+        for v in obj:
+            r = _find_flow_rows(v)
+            if r:
+                return r
+    return None
+
+
+def sosovalue_flows(key):
+    attempts = [
+        lambda: http_get_json_h("https://openapi.sosovalue.com/openapi/v1/etfs/summary-history"
+                                "?symbol=BTC&country_code=US&limit=40", {"x-soso-api-key": key}),
+        lambda: http_post_json("https://openapi.sosovalue.com/api/v1/etf/historicalInflowChart",
+                               {"type": "us-btc-spot"}, {"x-soso-api-key": key}),
+    ]
+    last = None
+    for a in attempts:
+        try:
+            found = _find_flow_rows(a())
+            if not found:
+                raise RuntimeError("回傳格式找不到淨流入欄位")
+            rows, dk, nk = found
+            out = []
+            for r in rows:
+                v = r.get(nk)
+                if v is None:
+                    continue
+                d = str(r.get(dk))[:10]
+                if re.fullmatch(r"\d{13}", str(r.get(dk))):
+                    d = dt.datetime.fromtimestamp(int(r[dk]) / 1000, UTC).date().isoformat()
+                out.append({"date": d, "total": round(float(v) / 1e6, 1), "ibit": None})
+            out.sort(key=lambda x: x["date"])
+            if out:
+                return out[-30:]
+        except Exception as e:
+            last = e
+    raise RuntimeError(f"SoSoValue：{str(last)[:60]}")
+
+
+def http_get_json_h(url, headers):
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json", **headers})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+def etf_flows():
+    errs = []
+    key = os.environ.get("SOSOVALUE_API_KEY", "").strip()
+    if key:
+        try:
+            return sosovalue_flows(key), "SoSoValue"
+        except Exception as e:
+            errs.append(str(e)[:70])
+    try:
+        return farside_flows(), "Farside"
+    except Exception:
+        errs.append("Farside 擋掉了 GitHub 的伺服器")
+    raise RuntimeError("；".join(errs))
 
 
 def farside_flows():
@@ -770,15 +923,16 @@ def build_signals(m, lv, vol_d, vol_w, windows, levels, fin, div, brk, etf, btcd
     if etf.get("flows"):
         last = etf["flows"][-1]
         five = sum(r["total"] for r in etf["flows"][-5:])
-        parts = [f"{last['date'][5:].replace('-', '/')}", f"5 日合計 {_money_m(five)}"]
+        parts = [f"{last['date'][5:].replace('-', '/')}（{etf.get('source', 'Farside')}）", f"5 日合計 {_money_m(five)}"]
         if ibit:
             parts.append(ibit)
         sig.append({"rank": 7, "name": "ETF 資金流", "live": True, "value": _money_m(last["total"]),
                     "detail": "；".join(parts), "tone": "up" if last["total"] > 0 else ("down" if last["total"] < 0 else "neutral")})
     else:
         sig.append({"rank": 7, "name": "ETF 資金流", "live": bool(ibit),
-                    "value": "Farside 抓不到",
-                    "detail": "；".join(x for x in (ibit, etf.get("error", "")) if x)})
+                    "value": "資金流抓不到",
+                    "detail": "；".join(x for x in (ibit, etf.get("error", ""),
+                                                   "加上 SOSOVALUE_API_KEY 就能補上") if x)})
 
     if btcd.get("value") is not None:
         ch = btcd.get("change_7d")
@@ -902,14 +1056,9 @@ def run(args):
         if args.demo:
             mstr = None  # 下面用持倉推算後再補
         else:
-            for fn in (mstr_yahoo, mstr_stooq):
-                try:
-                    mstr = fn()
-                    break
-                except Exception as e:
-                    errors.append(f"MSTR（{fn.__name__}）：{e}")
+            mstr = mstr_quote(cfg, errors)
             if mstr:
-                state["mstr_cache"] = {k: mstr[k] for k in ("price", "time", "source")}
+                state["mstr_cache"] = {k: mstr[k] for k in ("price", "time", "source", "kind")}
             elif state.get("mstr_cache"):
                 mstr = dict(state["mstr_cache"], history=[])
                 mstr_stale = True
@@ -952,7 +1101,11 @@ def run(args):
                 nb = strategy_metrics(s_, b["close"], 1)["net_bps_usd"]
                 drift = 1.05 + 0.25 * math.sin(b["time"] / (D1 * 40))
                 hist.append({"date": utc_date(b["time"]).isoformat(), "close": round(nb * drift, 2)})
-            mstr = {"price": hist[-1]["close"], "time": now, "source": "模擬數據", "history": hist}
+            mstr = {"price": hist[-1]["close"], "time": now, "source": "模擬數據", "history": hist,
+                    "kind": "perp", "official": {"price": hist[-1]["close"] * 0.998, "time": now - 9 * H1},
+                    "perp": {"venue": "Binance MSTRUSDT 永續", "price": hist[-1]["close"],
+                             "volume_24h_usd": 4.2e7, "time": now},
+                    "perps": [], "premium_pct": 0.2}
 
         metrics, hist_m, snap_age = {}, [], None
         if snap and mstr:
@@ -988,12 +1141,14 @@ def run(args):
             etf_cache = load_json(ETF_STORE, {})
             if now - etf_cache.get("fetched_at", 0) >= 3 * H1 or not etf_cache.get("flows"):
                 try:
-                    etf_cache = {"fetched_at": now, "flows": farside_flows()}
+                    flows, src = etf_flows()
+                    etf_cache = {"fetched_at": now, "flows": flows, "source": src}
                     save_json(ETF_STORE, etf_cache)
                 except Exception as e:
-                    etf["error"] = f"Farside：{str(e)[:120]}"
+                    etf["error"] = str(e)[:120]
             if etf_cache.get("flows"):
                 etf["flows"] = etf_cache["flows"]
+                etf["source"] = etf_cache.get("source", "Farside")
             try:
                 etf["ibit_volume_ratio"] = ibit_volume_ratio()
             except Exception:
@@ -1026,7 +1181,8 @@ def run(args):
         div = check_divergence(alerter, w1_closed, hist_m, cfg)
         if metrics and not mstr_stale:
             check_mnav(alerter, state, metrics.get("mnav_deck"),
-                       cfg.get("mnav_alert_thresholds", []), price, mstr["price"])
+                       cfg.get("mnav_alert_thresholds", []), price, mstr["price"],
+                       "（永續合約參考價）" if mstr.get("kind") == "perp" else "")
         strategy_alerts(alerter, new_filings, weeks, cfg, metrics, today)
 
         etf_th = float(cfg.get("etf", {}).get("alert_daily_usd_m", 500))
@@ -1087,7 +1243,9 @@ def run(args):
             "divergence": div,
             "mstr": None if not mstr else {
                 "price": round(mstr["price"], 2), "time": mstr["time"],
-                "source": mstr["source"], "stale": mstr_stale},
+                "source": mstr["source"], "kind": mstr.get("kind", "official"), "stale": mstr_stale,
+                "official": mstr.get("official"), "perp": mstr.get("perp"),
+                "perps": mstr.get("perps", []), "premium_pct": mstr.get("premium_pct")},
             "strategy": None if not snap else {
                 "mode": snap_mode, "as_of": snap["as_of"], "age_days": snap_age,
                 "stale": snap_age is not None and snap_age >= (14 if snap_mode == "auto" else stale_days),
