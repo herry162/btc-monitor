@@ -35,6 +35,14 @@
     "debt_override": null
   },
 
+  "official_framework": {
+    "as_of": "2026-10-04",
+    "fdso": 431400000,
+    "otm_debt_usd": 5910000000,
+    "otm_preferred_usd": 13950000000,
+    "_說明": "Strategy 2026-10-04 投資人簡報的官方 mNAV 公式：(BTC 市值 + USD 資產 − 價外可轉債 − 價外優先股) ÷ 完全稀釋股數。之後每週 8-K 的增發與回購會自動加減；Strategy 公布新的數字時更新這裡。刪掉這段就改回簡報簡化算法。"
+  },
+
   "issuance": {
     "massive_mstr_weekly_usd_m": 1000,
     "massive_convert_usd_m": 1000,

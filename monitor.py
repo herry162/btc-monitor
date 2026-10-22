@@ -330,6 +330,22 @@ def strategy_metrics(s, btc, mstr):
     }
 
 
+def official_metrics(off, snap, btc, mstr):
+    """官方框架：(BTC 市值 + USD 資產 − 價外可轉債 − 價外優先股) ÷ 完全稀釋股數"""
+    net = snap["btc_holdings"] * btc + snap["cash_usd"] - off["otm_debt_usd"] - off["otm_preferred_usd"]
+    nbps = net / off["fdso"]
+    return {"mnav_official": round(mstr / nbps, 4) if nbps > 0 else None,
+            "net_bps_official": round(nbps, 2),
+            "net_bps_sats_official": round(net / btc / off["fdso"] * 1e8)}
+
+
+def headline(m):
+    """排行、警報、摘要用的 mNAV：有官方框架就用官方，否則用簡報簡化算法"""
+    if m.get("mnav_official") is not None:
+        return m["mnav_official"], m["net_bps_official"], m["net_bps_sats_official"], "官方框架"
+    return m.get("mnav_deck"), m.get("net_bps_usd"), m.get("net_bps_sats"), "簡報簡化"
+
+
 def mnav_history(mstr_hist, btc_daily, snapshot_for):
     """snapshot_for(date_str) 回傳那天有效的持倉快照（或 None）"""
     btc_by_date = {utc_date(b["time"]).isoformat(): b["close"] for b in btc_daily}
@@ -513,7 +529,7 @@ def check_mnav(alerter, state, m, thresholds, btc, mstr, note=""):
             key = f"mnav:{th}:{direction}"
             if alerter.cooldown_ok(key, 12):
                 alerter.push(key, (
-                    f"mNAV {verb} {th}（簡報算法）\n"
+                    f"mNAV {verb} {th}\n"
                     f"目前 {m:.3f}，MSTR {mstr:.2f}{note}，BTC {usd(btc)}"))
     if m is not None:
         state["last_mnav"] = m
@@ -822,6 +838,9 @@ def strategy_alerts(alerter, new_filings, weeks, cfg, metrics, today):
     iss = cfg.get("issuance", {})
     massive_mstr = float(iss.get("massive_mstr_weekly_usd_m", 1000))
     massive_conv = float(iss.get("massive_convert_usd_m", 1000))
+    # 過去 26 週內有沒有巨量發普通股（簡報 p.166 的「每次發每次賣」從巨量之後開始）
+    cut = (today - dt.timedelta(weeks=26)).isoformat()
+    recent_massive = any(w["mstr_proceeds_m"] >= massive_mstr and w["period_end"] >= cut for w in weeks)
     for f in sorted(new_filings, key=lambda x: x["filed"]):
         if (today - dt.date.fromisoformat(f["filed"])).days > 3:
             continue  # 補抓的舊申報不發通知
@@ -848,8 +867,13 @@ def strategy_alerts(alerter, new_filings, weeks, cfg, metrics, today):
                 lines.append(f"MSTR 回購 {rep['MSTR']['shares']:,.0f} 股（${rep['MSTR'].get('price_m', 0):,.1f}M）")
             if "usd_reserve" in f:
                 lines.append(f"USD Reserve ${f['usd_reserve'] / 1e9:.2f}B、USD Cash ${f.get('usd_cash', 0) / 1e6:,.0f}M")
-            if metrics.get("mnav_deck") is not None:
-                lines.append(f"mNAV {metrics['mnav_deck']:.2f}（已用新數據重算）")
+            hm, _, _, basis = headline(metrics)
+            if hm is not None:
+                lines.append(f"mNAV {hm:.2f}（{basis}，已用新數據重算）")
+            if ms.get("shares") and ms.get("proceeds_m", 0) < massive_mstr:
+                lines.append("簡報解讀：發普通股代表 Strategy 認為 mNAV 偏高（p.149–151）；未達巨量門檻")
+                if recent_massive:
+                    lines.append("巨量發行後的每一次增發：簡報規則是分批賣出剩下的一半（p.166）")
             alerter.push(f"8k:{key_base}", "\n".join(lines))
             if ms.get("proceeds_m", 0) >= massive_mstr:
                 alerter.push(f"massive:{key_base}", (
@@ -859,8 +883,8 @@ def strategy_alerts(alerter, new_filings, weeks, cfg, metrics, today):
             if c.get("kind") not in ("pricing", "closing"):
                 continue
             big = c["principal"] / 1e6 >= massive_conv
-            note = ("簡報解讀：巨量發可轉債＝mNAV 最頂，MSTR 出場一半" if big
-                    else "簡報解讀：發可轉債代表債市看好 MSTR，mNAV 將上升")
+            note = ("簡報解讀：巨量發可轉債＝mNAV 最頂，MSTR 出場一半（p.147、p.166）" if big
+                    else "簡報解讀：發可轉債代表債市看好 MSTR、mNAV 將上升；不加 BTC 改加 MSTR，小倉買 MSTU（p.134–140）")
             alerter.push(f"conv:{key_base}", (
                 f"{'⚠️ 巨量' if big else ''}Strategy 可轉債{'定價' if c['kind'] == 'pricing' else '完成發行'}："
                 f"${c['principal'] / 1e9:.2f}B {c.get('notes', '')}\n{note}\n"
@@ -903,8 +927,8 @@ def build_signals(m, lv, vol_d, vol_w, windows, levels, fin, div, brk, etf, btcd
         sig.append({"rank": 1, "name": "Strategy 融資方式", "live": False, "value": "等待 SEC 資料",
                     "detail": "第一次執行要補抓過去一年的 8-K，可能要跑幾次才完整"})
 
-    if m.get("mnav_deck") is not None:
-        md = m["mnav_deck"]
+    md, _, _, basis = headline(m)
+    if md is not None:
         state = "折價，市值低於淨 BTC" if md < 1 else f"溢價 {(md - 1) * 100:.0f}%"
         if div.get("status") == "top":
             dtext, tone = "週線頂背離！", "warn"
@@ -917,7 +941,7 @@ def build_signals(m, lv, vol_d, vol_w, windows, levels, fin, div, brk, etf, btcd
             dtext = f"無背離（mNAV 距 {div.get('need', 27) - 1} 週高 {div.get('mnav_vs_max_pct', 0):+.0f}%）"
             tone = "warn" if md < 1 else "neutral"
         sig.append({"rank": 2, "name": "mNAV", "live": True, "value": f"{md:.2f}",
-                    "detail": f"{state}；{dtext}", "tone": tone})
+                    "detail": f"{basis}；{state}；{dtext}", "tone": tone})
     else:
         sig.append({"rank": 2, "name": "mNAV", "live": True, "value": "無法計算",
                     "detail": "淨 BTC 市值為負或缺 MSTR 股價", "tone": "warn"})
@@ -965,10 +989,10 @@ def build_signals(m, lv, vol_d, vol_w, windows, levels, fin, div, brk, etf, btcd
     sig.append({"rank": 5, "name": "時間窗口", "live": True, "value": value,
                 "detail": detail, "tone": "warn" if cur else "neutral"})
 
-    if m.get("net_bps_usd") is not None:
-        sig.append({"rank": 6, "name": "Net BPS", "live": True,
-                    "value": f"${m['net_bps_usd']:,.2f}",
-                    "detail": f"每股淨 BTC {m['net_bps_sats']:,} 聰（未扣負債 {m['bps_sats']:,} 聰）"})
+    _, nb, nbs, basis = headline(m)
+    if nb is not None:
+        sig.append({"rank": 6, "name": "Net BPS", "live": True, "value": f"${nb:,.2f}",
+                    "detail": f"{basis}；每股淨 BTC {nbs:,} 聰（不扣負債、以基本股數計為 {m['bps_sats']:,} 聰）"})
 
     ibit = f"IBIT 成交量 {etf['ibit_volume_ratio']:.1f}×" if etf.get("ibit_volume_ratio") else ""
     if etf.get("flows"):
@@ -1158,9 +1182,14 @@ def run(args):
                              "volume_24h_usd": 4.2e7, "time": now},
                     "perps": [], "premium_pct": 0.2}
 
-        metrics, hist_m, snap_age = {}, [], None
+        metrics, hist_m, snap_age, off = {}, [], None, None
+        off_anchor = cfg.get("official_framework")
+        if snap and snap_mode == "auto" and off_anchor:
+            off = sec.official_at(today.isoformat(), store, off_anchor, eur, ups)
         if snap and mstr:
             metrics = strategy_metrics(snap, price, mstr["price"])
+            if off:
+                metrics.update(official_metrics(off, snap, price, mstr["price"]))
             hist_m = mnav_history(mstr.get("history", []), d1, snapshot_for)
         if snap_mode == "auto" and ups:
             snap_age = (today - dt.date.fromisoformat(ups[-1]["filed"])).days
@@ -1255,7 +1284,7 @@ def run(args):
                "1w": check_breakout(alerter, w1_closed, "1w", "週線", cfg)}
         div = check_divergence(alerter, w1_closed, hist_m, cfg)
         if metrics and not mstr_stale:
-            check_mnav(alerter, state, metrics.get("mnav_deck"),
+            check_mnav(alerter, state, headline(metrics)[0],
                        cfg.get("mnav_alert_thresholds", []), price, mstr["price"],
                        "（永續合約參考價）" if mstr.get("kind") == "perp" else "")
         strategy_alerts(alerter, new_filings, weeks, cfg, metrics, today)
@@ -1288,9 +1317,11 @@ def run(args):
             last_close = d1_closed[-1]["close"]
             lines = [f"每日摘要 {tnow.strftime('%m/%d')}",
                      f"BTC 日線收盤 {usd(last_close)}，現價 {usd(price)}"]
-            if metrics.get("mnav_deck") is not None:
-                lines.append(f"mNAV {metrics['mnav_deck']:.2f}（簡報）／{metrics['mnav_ev']:.2f}（企業價值）")
-                lines.append(f"Net BPS ${metrics['net_bps_usd']:,.2f}")
+            hm, hnb, _, basis = headline(metrics)
+            if hm is not None:
+                extra = f"／簡報簡化 {metrics['mnav_deck']:.2f}" if basis == "官方框架" and metrics.get("mnav_deck") else ""
+                lines.append(f"mNAV {hm:.2f}（{basis}）{extra}")
+                lines.append(f"Net BPS ${hnb:,.2f}")
             lines.append("價位距離：" + "、".join(
                 f"{d['name']} {d['pct']:+.1f}%" for d in reversed(lv["distances"])))
             if etf.get("flows"):
@@ -1327,7 +1358,7 @@ def run(args):
                 "btc_holdings": snap["btc_holdings"], "shares_outstanding": snap["shares_outstanding"],
                 "debt_usd": snap["debt_usd"], "cash_usd": snap["cash_usd"],
                 "preferred_usd": snap.get("preferred_usd", {}),
-                "sources": snap.get("_資料來源", {}), "metrics": metrics},
+                "sources": snap.get("_資料來源", {}), "metrics": metrics, "official": off},
             "financing": {k: v for k, v in fin.items() if k != "recent_convert"},
             "etf": etf,
             "btcd": btcd,
@@ -1339,7 +1370,7 @@ def run(args):
             "errors": errors,
         }
         save_json(DATA_PATH, data, compact=True)
-        print(f"完成：BTC {usd(price)}，mNAV {metrics.get('mnav_deck')}（{snap_mode}），"
+        print(f"完成：BTC {usd(price)}，mNAV {headline(metrics)[0]}（{headline(metrics)[3]}，{snap_mode}），"
               f"新 8-K {len(new_filings)} 份，錯誤 {len(errors)} 筆")
     finally:
         if not args.demo:

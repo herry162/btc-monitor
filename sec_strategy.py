@@ -492,6 +492,32 @@ def snapshot_at(date, store, fallback, eur_usd=1.16, ups=None, anc=None):
     }
 
 
+def deltas_since(store, since, until, eur_usd=1.16, ups=None):
+    """since（不含）之後、until（含）之前的 8-K：MSTR 淨增股數、各優先股面額增減"""
+    ups = ups if ups is not None else _updates(store)
+    sh, pref = 0.0, {s: 0.0 for s in SERIES}
+    for u in ups:
+        if u["period_end"] > until or not u.get("period_start") or u["period_start"] <= since:
+            continue
+        sh += u.get("atm", {}).get("MSTR", {}).get("shares", 0.0)
+        sh -= u.get("repurchase", {}).get("MSTR", {}).get("shares", 0.0)
+        for s in SERIES:
+            pref[s] += u.get("atm", {}).get(s, {}).get("notional_m", 0.0) * 1e6
+            pref[s] -= u.get("repurchase", {}).get(s, {}).get("shares", 0.0) * 100 * (eur_usd if s == "STRE" else 1.0)
+    return sh, pref
+
+
+def official_at(date, store, anchor, eur_usd=1.16, ups=None):
+    """Strategy 官方 mNAV 框架（完全稀釋股數、只扣價外可轉債與價外優先股）在 date 的推算值"""
+    if not anchor or not anchor.get("as_of") or anchor["as_of"] > date:
+        return None
+    sh, pref = deltas_since(store, anchor["as_of"], date, eur_usd, ups)
+    return {"as_of": anchor["as_of"], "fdso": float(anchor["fdso"]) + sh,
+            "otm_debt_usd": float(anchor["otm_debt_usd"]),
+            "otm_preferred_usd": float(anchor["otm_preferred_usd"]) + sum(pref.values()),
+            "fdso_delta": sh, "pref_delta": sum(pref.values())}
+
+
 def weekly_financing(store, lookback=52):
     """每週融資：MSTR 增發、優先股發行、回購、可轉債"""
     rows = []
