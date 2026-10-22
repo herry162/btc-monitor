@@ -223,7 +223,7 @@
   </section>
 
   <footer>
-    資料來源：Coinbase（BTC）、Yahoo 或 Stooq（MSTR、IBIT，延遲報價）、SEC EDGAR（Strategy 8-K 與季報）、Farside（ETF 資金流）、CoinGecko（BTC.D）。
+    資料來源：Coinbase（BTC）、Nasdaq 官方成交經 Yahoo（MSTR 開盤時段、IBIT）、Binance／Hyperliquid MSTR 永續合約（美股休市時的 24 小時參考價）、SEC EDGAR（Strategy 8-K 與季報）、Farside（ETF 資金流）、CoinGecko（BTC.D）。
     頁面上的 BTC 價格即時更新，其他數據約每 15 分鐘更新一次。
     指標依「2026 第三季度簡報」的框架計算，只是追蹤工具，不構成投資建議。
   </footer>
@@ -245,6 +245,7 @@
   });
 
   let DATA = null;
+  let liveM = { price: null, venue: null, time: 0 };   // 24 小時 MSTR（永續合約 WebSocket）
   let tf = "1d";
   let live = { price: null, ok: false };
   let chart = null, S = {}, priceLines = [];
@@ -363,7 +364,10 @@
 
   // ---------------------------------------------------------------- 指標排行
   function renderSignals() {
-    $("signals").innerHTML = DATA.signals.map((s) => `
+    const lm = liveMetrics();
+    const sigs = DATA.signals.map((s) => (s.rank === 2 && lm && lm.mnav_deck != null && lm.live)
+      ? { ...s, value: lm.mnav_deck.toFixed(2) + " 即時" } : s);
+    $("signals").innerHTML = sigs.map((s) => `
       <li class="${s.live ? "" : "pending"}">
         <span class="rank">${s.rank}</span>
         <span class="sig-name">${esc(s.name)}</span>
@@ -457,24 +461,51 @@
   }));
 
   // ---------------------------------------------------------------- mNAV
-  function renderMnav() {
-    const st = DATA.strategy, m = st && st.metrics;
-    if (!st || !m || m.mnav_deck == null) {
-      $("mnav").innerHTML = `<div class="empty">還算不出 mNAV。確認 config.json 有持倉快照，且 MSTR 股價抓得到。</div>`;
-    } else {
-      const ms = DATA.mstr;
-      $("mnav").innerHTML = `
-        <div class="mnav-main"><span class="mnav-big">${m.mnav_deck.toFixed(2)}</span>
-          <span class="mnav-label">簡報算法：MSTR 股價 ÷ Net BPS</span></div>
-        <dl class="facts">
-          <div><dt>企業價值算法（同官方儀表板類型）</dt><dd>${m.mnav_ev.toFixed(2)}</dd></div>
-          <div><dt>舊算法（市值 ÷ BTC 市值）</dt><dd>${m.mnav_old.toFixed(2)}</dd></div>
-          <div><dt>Net BPS</dt><dd>$${f2.format(m.net_bps_usd)}</dd></div>
-          <div><dt>每股淨 BTC</dt><dd>${f0.format(m.net_bps_sats)} 聰</dd></div>
-          <div><dt>MSTR 股價</dt><dd>$${f2.format(ms.price)}</dd></div>
-          <div><dt>股價時間</dt><dd style="font-size:15px">${esc(tpe(ms.time))}<br><span style="font-weight:500;color:var(--muted)">${esc(ms.source)}</span></dd></div>
-        </dl>`;
+  // 用即時 BTC 價格與 24 小時 MSTR 價格，在瀏覽器裡重算 mNAV
+  function liveMetrics() {
+    const st = DATA && DATA.strategy;
+    if (!st || !DATA.mstr) return null;
+    const btc = currentPrice();
+    const useLive = liveM.price && Date.now() / 1000 - liveM.time < 120;
+    const mstr = useLive ? liveM.price : DATA.mstr.price;
+    const pref = Object.values(st.preferred_usd || {}).reduce((a, b) => a + b, 0);
+    const btcVal = st.btc_holdings * btc;
+    const net = btcVal - st.debt_usd - pref + st.cash_usd;
+    const nbps = net / st.shares_outstanding;
+    const mcap = mstr * st.shares_outstanding;
+    return {
+      live: useLive, mstr, btc,
+      source: useLive ? `${liveM.venue}（即時）` : DATA.mstr.source,
+      mnav_deck: nbps > 0 ? mstr / nbps : null,
+      mnav_ev: (mcap + st.debt_usd + pref - st.cash_usd) / btcVal,
+      mnav_old: mcap / btcVal,
+      net_bps_usd: nbps,
+      net_bps_sats: net / btc / st.shares_outstanding * 1e8,
+    };
+  }
+
+  function renderMnavNumbers() {
+    const m = liveMetrics();
+    if (!m || m.mnav_deck == null) {
+      $("mnav").innerHTML = `<div class="empty">還算不出 mNAV。確認持倉數據和 MSTR 價格都抓得到。</div>`;
+      return;
     }
+    const ms = DATA.mstr, off = ms.official, prem = m.live && off ? (m.mstr / off.price - 1) * 100 : ms.premium_pct;
+    $("mnav").innerHTML = `
+      <div class="mnav-main"><span class="mnav-big">${m.mnav_deck.toFixed(2)}</span>
+        <span class="mnav-label">簡報算法：MSTR 股價 ÷ Net BPS${m.live ? "，即時計算" : ""}</span></div>
+      <dl class="facts">
+        <div><dt>企業價值算法（同官方儀表板類型）</dt><dd>${m.mnav_ev.toFixed(2)}</dd></div>
+        <div><dt>舊算法（市值 ÷ BTC 市值）</dt><dd>${m.mnav_old.toFixed(2)}</dd></div>
+        <div><dt>Net BPS</dt><dd>$${f2.format(m.net_bps_usd)}</dd></div>
+        <div><dt>每股淨 BTC</dt><dd>${f0.format(m.net_bps_sats)} 聰</dd></div>
+        <div><dt>MSTR 價格</dt><dd>$${f2.format(m.mstr)}<br><span style="font-size:13px;font-weight:500;color:var(--muted)">${esc(m.source)}</span></dd></div>
+        <div><dt>Nasdaq 官方最後成交</dt><dd>${off ? "$" + f2.format(off.price) : "—"}<br><span style="font-size:13px;font-weight:500;color:var(--muted)">${off ? esc(tpe(off.time)) : ""}${prem != null ? `，永續價差 ${prem >= 0 ? "+" : ""}${prem.toFixed(2)}%` : ""}</span></dd></div>
+      </dl>`;
+  }
+
+  function renderMnav() {
+    renderMnavNumbers();
     renderMchart();
     renderSnapshot();
   }
@@ -608,6 +639,8 @@
     lastUi = now;
     renderHeader();
     renderRuler();
+    renderMnavNumbers();
+    renderSignals();
     if (chart) {
       const arr = DATA.candles[tf];
       const last = arr[arr.length - 1];
@@ -659,7 +692,38 @@
     } catch (_) { /* 下次再試 */ }
   }, 5 * 60 * 1000);
 
-  load().then(connectLive);
+  let mRetry = 0, mVenue = 0, mLastUi = 0;
+  const M_VENUES = [
+    { name: "Binance MSTRUSDT 永續", url: "wss://fstream.binance.com/ws/mstrusdt@ticker",
+      sub: null, parse: (m) => (m.e === "24hrTicker" && m.c ? +m.c : null) },
+    { name: "Hyperliquid xyz:MSTR 永續", url: "wss://api.hyperliquid.xyz/ws",
+      sub: { method: "subscribe", subscription: { type: "activeAssetCtx", coin: "xyz:MSTR" } },
+      parse: (m) => (m.channel === "activeAssetCtx" && m.data && m.data.ctx ? +(m.data.ctx.midPx || m.data.ctx.markPx) : null) },
+  ];
+  function connectMstr() {
+    if (!("WebSocket" in window)) return;
+    const v = M_VENUES[mVenue % M_VENUES.length];
+    let ws, got = false;
+    try { ws = new WebSocket(v.url); } catch (e) { return; }
+    ws.onopen = () => { if (v.sub) ws.send(JSON.stringify(v.sub)); };
+    ws.onmessage = (e) => {
+      try {
+        const p = v.parse(JSON.parse(e.data));
+        if (!p || !isFinite(p)) return;
+        got = true; mRetry = 0;
+        liveM = { price: p, venue: v.name, time: Date.now() / 1000 };
+        const now = Date.now();
+        if (DATA && now - mLastUi > 1000) { mLastUi = now; renderMnavNumbers(); renderSignals(); }
+      } catch (_) { /* 略過 */ }
+    };
+    ws.onclose = () => {
+      if (!got) mVenue++;  // 這家連不上就換下一家
+      setTimeout(connectMstr, Math.min(30000, 2000 * 2 ** mRetry++));
+    };
+    ws.onerror = () => ws.close();
+  }
+
+  load().then(() => { connectLive(); connectMstr(); });
 })();
 </script>
 </body>
