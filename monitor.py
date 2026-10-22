@@ -560,7 +560,7 @@ def _farside_rows_from_markdown(md):
             if len(cells) > i_t and _paren_num(cells[i_t]) is not None:
                 d = dt.datetime.strptime(cells[0], "%d %b %Y").date().isoformat()
                 rows.append({"date": d, "total": _paren_num(cells[i_t]), "ibit": _paren_num(cells[i_i])})
-    return rows[-30:]
+    return rows
 
 
 def _find_flow_rows(obj):
@@ -585,33 +585,52 @@ def _find_flow_rows(obj):
 
 
 def sosovalue_flows(key):
+    base = "https://openapi.sosovalue.com/openapi/v1/etfs/summary-history?symbol=BTC&country_code=US&limit="
+    h = {"x-soso-api-key": key}
     attempts = [
-        lambda: http_get_json_h("https://openapi.sosovalue.com/openapi/v1/etfs/summary-history"
-                                "?symbol=BTC&country_code=US&limit=40", {"x-soso-api-key": key}),
+        lambda: http_get_json_h(base + "1000", h),
         lambda: http_post_json("https://openapi.sosovalue.com/api/v1/etf/historicalInflowChart",
-                               {"type": "us-btc-spot"}, {"x-soso-api-key": key}),
+                               {"type": "us-btc-spot"}, h),
+        lambda: http_get_json_h(base + "300", h),
+        lambda: http_get_json_h(base + "40", h),
     ]
-    last = None
+    best, last = [], None
     for a in attempts:
         try:
             found = _find_flow_rows(a())
             if not found:
                 raise RuntimeError("回傳格式找不到淨流入欄位")
             rows, dk, nk = found
+            keys = rows[0].keys()
+            ak = next((k for k in keys if re.search(r"(total)?.?net.?assets?|aum", k, re.I)
+                       and not re.search(r"inflow", k, re.I)), None)
             out = []
             for r in rows:
                 v = r.get(nk)
                 if v is None:
                     continue
-                d = str(r.get(dk))[:10]
-                if re.fullmatch(r"\d{13}", str(r.get(dk))):
-                    d = dt.datetime.fromtimestamp(int(r[dk]) / 1000, UTC).date().isoformat()
-                out.append({"date": d, "total": round(float(v) / 1e6, 1), "ibit": None})
+                raw = str(r.get(dk))
+                d = raw[:10]
+                if re.fullmatch(r"\d{13}", raw):
+                    d = dt.datetime.fromtimestamp(int(raw) / 1000, UTC).date().isoformat()
+                elif re.fullmatch(r"\d{10}", raw):
+                    d = dt.datetime.fromtimestamp(int(raw), UTC).date().isoformat()
+                rec = {"date": d, "total": round(float(v) / 1e6, 1), "ibit": None}
+                if ak and r.get(ak) not in (None, ""):
+                    try:
+                        rec["aum_b"] = round(float(r[ak]) / 1e9, 2)
+                    except (TypeError, ValueError):
+                        pass
+                out.append(rec)
             out.sort(key=lambda x: x["date"])
-            if out:
-                return out[-30:]
+            if len(out) > len(best):
+                best = out
+            if len(best) >= 250:  # 拿到夠長的歷史就不用再試
+                break
         except Exception as e:
             last = e
+    if best:
+        return best
     raise RuntimeError(f"SoSoValue：{str(last)[:60]}")
 
 
@@ -674,7 +693,7 @@ def _farside_direct():
             d = dt.datetime.strptime(r[0].strip(), "%d %b %Y").date().isoformat()
             rows.append({"date": d, "total": total, "ibit": _paren_num(r[i_ibit])})
         if rows:
-            return rows[-30:]
+            return rows
     raise RuntimeError("Farside 頁面格式變了，找不到資金流表")
 
 
@@ -1133,22 +1152,35 @@ def run(args):
         etf, btcd = {}, {}
         if args.demo:
             rnd = random.Random(3)
-            etf = {"flows": [{"date": (today - dt.timedelta(days=i)).isoformat(),
-                              "total": round(rnd.gauss(60, 180), 1), "ibit": None} for i in range(20, 0, -1)],
-                   "ibit_volume_ratio": 1.2}
+            hist_e, aum = [], 95.0
+            for i in range(420, 0, -1):
+                d = today - dt.timedelta(days=i)
+                if d.weekday() >= 5:
+                    continue
+                v = round(rnd.gauss(40, 260), 1)
+                aum = max(60.0, aum + v / 1000 + rnd.gauss(0, 0.8))
+                hist_e.append({"date": d.isoformat(), "total": v, "ibit": None, "aum_b": round(aum, 2)})
+            etf = {"flows": hist_e[-30:], "history": hist_e, "source": "SoSoValue", "ibit_volume_ratio": 1.2}
             btcd = {"value": 58.4, "change_7d": 0.6}
         else:
             etf_cache = load_json(ETF_STORE, {})
-            if now - etf_cache.get("fetched_at", 0) >= 3 * H1 or not etf_cache.get("flows"):
+            hist_e = {r["date"]: r for r in etf_cache.get("history", etf_cache.get("flows", []))}
+            if etf_cache.get("v") != 2 or now - etf_cache.get("fetched_at", 0) >= 3 * H1 or not hist_e:
                 try:
                     flows, src = etf_flows()
-                    etf_cache = {"fetched_at": now, "flows": flows, "source": src}
+                    for r in flows:
+                        old_r = hist_e.get(r["date"], {})
+                        hist_e[r["date"]] = {**old_r, **{k: v for k, v in r.items() if v is not None}}
+                    etf_cache = {"v": 2, "fetched_at": now, "source": src,
+                                 "history": [hist_e[d] for d in sorted(hist_e)]}
                     save_json(ETF_STORE, etf_cache)
                 except Exception as e:
                     etf["error"] = str(e)[:120]
-            if etf_cache.get("flows"):
-                etf["flows"] = etf_cache["flows"]
-                etf["source"] = etf_cache.get("source", "Farside")
+            if hist_e:
+                hist_list = [hist_e[d] for d in sorted(hist_e)]
+                etf["flows"] = hist_list[-30:]
+                etf["history"] = hist_list
+                etf["source"] = etf_cache.get("source", "SoSoValue")
             try:
                 etf["ibit_volume_ratio"] = ibit_volume_ratio()
             except Exception:
