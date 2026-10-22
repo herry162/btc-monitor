@@ -1,111 +1,133 @@
 {
-  "fetched_at": 1792636120,
-  "flows": [
+  "v": 2,
+  "fetched_at": 1792636844,
+  "source": "SoSoValue",
+  "history": [
     {
       "date": "2026-09-22",
       "total": 714.7,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 110.84
     },
     {
       "date": "2026-09-23",
       "total": 347.0,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 108.66
     },
     {
       "date": "2026-09-24",
       "total": 190.6,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 108.92
     },
     {
       "date": "2026-09-25",
       "total": 134.5,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 108.42
     },
     {
       "date": "2026-09-28",
       "total": 31.1,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 107.82
     },
     {
       "date": "2026-09-29",
       "total": 66.2,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 107.96
     },
     {
       "date": "2026-09-30",
       "total": -148.7,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 107.98
     },
     {
       "date": "2026-10-01",
       "total": 102.7,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 109.34
     },
     {
       "date": "2026-10-02",
       "total": 189.8,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 108.89
     },
     {
       "date": "2026-10-05",
       "total": -89.9,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 110.77
     },
     {
       "date": "2026-10-06",
       "total": 118.9,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 110.68
     },
     {
       "date": "2026-10-07",
       "total": -487.1,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 107.4
     },
     {
       "date": "2026-10-08",
       "total": -244.1,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 104.91
     },
     {
       "date": "2026-10-09",
       "total": 21.1,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 105.84
     },
     {
       "date": "2026-10-12",
       "total": -65.4,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 106.06
     },
     {
       "date": "2026-10-13",
       "total": 175.6,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 106.98
     },
     {
       "date": "2026-10-14",
       "total": -261.5,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 104.83
     },
     {
       "date": "2026-10-15",
       "total": 5.1,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 105.71
     },
     {
       "date": "2026-10-16",
       "total": -82.4,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 104.29
     },
     {
       "date": "2026-10-19",
       "total": 526.6,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 105.46
     },
     {
       "date": "2026-10-20",
       "total": 23.2,
-      "ibit": null
+      "ibit": null,
+      "aum_b": 106.28
     }
-  ],
-  "source": "SoSoValue"
+  ]
 }
