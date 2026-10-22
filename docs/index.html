@@ -136,6 +136,11 @@
   .chart-box { background: var(--panel); border-radius: 10px; padding: 8px 4px 4px; }
   #chart { height: 360px; }
   #mchart { height: 180px; }
+  #fchart { height: 200px; }
+  .fin-list { list-style: none; margin: 12px 0 0; padding: 0; }
+  .fin-list li { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .fin-list b { font-family: var(--num); font-weight: 600; }
+  .fin-list a { color: var(--muted); }
   .legend { color: var(--muted); font-size: 13px; margin: 8px 2px 0; }
   .empty { color: var(--muted); font-size: 14px; padding: 24px 12px; text-align: center; }
 
@@ -205,13 +210,20 @@
     <div id="snap"></div>
   </section>
 
+  <section aria-labelledby="h-fin">
+    <h2 id="h-fin">Strategy 每週融資</h2>
+    <div class="chart-box"><div id="fchart"></div></div>
+    <p class="legend" id="flegend"></p>
+    <div id="fin"></div>
+  </section>
+
   <section aria-labelledby="h-alerts">
     <h2 id="h-alerts">最近警報</h2>
     <ul class="alerts" id="alerts"></ul>
   </section>
 
   <footer>
-    資料來源：Coinbase（BTC）、Yahoo 或 Stooq（MSTR，延遲報價）、Strategy 申報文件。
+    資料來源：Coinbase（BTC）、Yahoo 或 Stooq（MSTR、IBIT，延遲報價）、SEC EDGAR（Strategy 8-K 與季報）、Farside（ETF 資金流）、CoinGecko（BTC.D）。
     頁面上的 BTC 價格即時更新，其他數據約每 15 分鐘更新一次。
     指標依「2026 第三季度簡報」的框架計算，只是追蹤工具，不構成投資建議。
   </footer>
@@ -237,6 +249,7 @@
   let live = { price: null, ok: false };
   let chart = null, S = {}, priceLines = [];
   let mchart = null, mline = null, mLines = [];
+  let fchart = null, fbars = null, fLine = null;
   const hasLib = typeof window.LightweightCharts !== "undefined";
 
   // ---------------------------------------------------------------- 讀資料
@@ -262,6 +275,7 @@
     renderSignals();
     renderChart();
     renderMnav();
+    renderFinancing();
     renderAlerts();
   }
 
@@ -288,6 +302,8 @@
     else if (ageMin > 45) out.push(["error", `數據已經 ${ageMin} 分鐘沒更新。到 GitHub 的 Actions 分頁，看排程有沒有失敗。`]);
     if (DATA.strategy && DATA.strategy.stale) out.push(["warn", `Strategy 持倉快照已經 ${DATA.strategy.age_days} 天沒更新，mNAV 可能不準。更新 config.json 的 strategy_snapshots。`]);
     if (DATA.mstr && DATA.mstr.stale) out.push(["warn", "這次抓不到 MSTR 股價，mNAV 用的是上一次成功抓到的價格。"]);
+    if (DATA.financing && DATA.financing.backlog > 0) out.push(["info", `正在補抓 Strategy 過去的 SEC 申報，還剩 ${DATA.financing.backlog} 份，每 15 分鐘抓一批。`]);
+    if (DATA.strategy && DATA.strategy.mode === "manual" && !DATA.demo) out.push(["warn", "Strategy 持倉目前用的是 config.json 的手動數字，自動解析還沒有資料。"]);
     (DATA.errors || []).forEach((e) => out.push(["warn", "部分數據沒抓到：" + e]));
     $("banners").innerHTML = out.map(([k, t]) => `<div class="banner ${k}">${esc(t)}</div>`).join("");
   }
@@ -504,11 +520,56 @@
     ];
     $("snap").innerHTML = `
       <details>
-        <summary>持倉快照 ${esc(st.as_of)}（${st.age_days} 天前），點開看每個數字的來源</summary>
+        <summary>${st.mode === "auto" ? `持倉自動推算自 SEC 申報（最新 8-K 是 ${st.age_days} 天前）` : `持倉用手動快照 ${esc(st.as_of)}（${st.age_days} 天前）`}，點開看每個數字的來源</summary>
         <div class="table-wrap"><table class="src"><tbody>
           ${rows.map(([a, b, c]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td><td>${esc(c || "")}</td></tr>`).join("")}
         </tbody></table></div>
       </details>`;
+  }
+
+  // ---------------------------------------------------------------- 每週融資
+  const fmtM = (v) => v >= 1000 ? "$" + (v / 1000).toFixed(2) + "B" : "$" + f0.format(v) + "M";
+  function renderFinancing() {
+    const fin = DATA.financing || {};
+    const weeks = fin.weeks || [];
+    const el = $("fchart");
+    if (!weeks.length) {
+      if (fchart) { fchart.remove(); fchart = null; fbars = null; }
+      el.innerHTML = `<div class="empty">還沒有 SEC 資料。第一次執行會補抓過去一年的 8-K，大約一小時內完成。</div>`;
+      $("flegend").textContent = "";
+      $("fin").innerHTML = "";
+      return;
+    }
+    if (hasLib) {
+      if (!fchart) {
+        el.innerHTML = "";
+        fchart = LightweightCharts.createChart(el, { autoSize: true, ...theme(), timeScale: { borderColor: css("--line"), timeVisible: false } });
+        fbars = fchart.addHistogramSeries({ priceLineVisible: false, lastValueVisible: false, priceFormat: { type: "custom", formatter: (v) => fmtM(v) } });
+      }
+      fchart.applyOptions(theme());
+      fchart.applyOptions({ timeScale: { timeVisible: false } });
+      const day = (s) => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) / 1000;
+      fbars.setData(weeks.map((w) => ({ time: day(w.period_end), value: w.mstr_proceeds_m,
+        color: w.mstr_proceeds_m >= fin.massive_m ? css("--warn") : css("--muted") })));
+      if (fLine) fbars.removePriceLine(fLine);
+      fLine = fbars.createPriceLine({ price: fin.massive_m, color: css("--warn"), lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: "巨量" });
+      fchart.timeScale().fitContent();
+    }
+    $("flegend").textContent = `每根是一週的 MSTR 增發金額，虛線是巨量門檻 ${fmtM(fin.massive_m)}，超過會變色並發警報。`;
+
+    const w = weeks[weeks.length - 1];
+    const lines = [];
+    lines.push(`<li>最新一週 <b>${esc(w.period_start || "")}～${esc(w.period_end)}</b>${w.url ? ` · <a href="${esc(w.url)}" target="_blank" rel="noopener">8-K 原文</a>` : ""}</li>`);
+    lines.push(`<li>BTC：買入 <b>${f0.format(w.btc_purchased)}</b>${w.btc_sold ? `、賣出 <b>${f0.format(w.btc_sold)}</b>` : ""}，持有 <b>${f0.format(w.btc_holdings || 0)}</b></li>`);
+    lines.push(`<li>MSTR 增發 <b>${f0.format(w.mstr_shares)}</b> 股（<b>${fmtM(w.mstr_proceeds_m)}</b>）${fin.pct_rank != null && w.mstr_proceeds_m ? `，過去 ${weeks.length} 週第 ${fin.pct_rank} 百分位` : ""}</li>`);
+    if (w.pref_proceeds_m) lines.push(`<li>優先股發行 <b>${fmtM(w.pref_proceeds_m)}</b></li>`);
+    Object.entries(w.repurchase || {}).forEach(([k, v]) => lines.push(`<li>${esc(k)} 回購 <b>${f0.format(v.shares)}</b> 股（<b>${fmtM(v.price_m)}</b>）</li>`));
+    const convs = fin.converts || [];
+    lines.push(convs.length
+      ? `<li>可轉債：${convs.slice(-3).reverse().map((c) => `${esc(c.filed)} <b>$${(c.principal / 1e9).toFixed(2)}B</b>`).join("、")}</li>`
+      : `<li>過去一年沒有可轉債發行</li>`);
+    $("fin").innerHTML = `<ul class="fin-list">${lines.join("")}</ul>`;
   }
 
   // ---------------------------------------------------------------- 警報
@@ -582,6 +643,7 @@
     if (!DATA) return;
     if (chart) { chart.applyOptions(theme()); applySeriesColors(); renderChart(true); }
     renderMchart();
+    if (fchart) { fchart.remove(); fchart = null; fbars = null; fLine = null; renderFinancing(); }
   });
   window.addEventListener("resize", () => { if (DATA) renderRuler(); });
 
@@ -593,7 +655,7 @@
       if (fresh.generated_at === DATA.generated_at) return;
       DATA = fresh;
       renderHeader(); renderBanners(); renderRuler(); renderSignals();
-      renderChart(true); renderMnav(); renderAlerts();
+      renderChart(true); renderMnav(); renderFinancing(); renderAlerts();
     } catch (_) { /* 下次再試 */ }
   }, 5 * 60 * 1000);
 
