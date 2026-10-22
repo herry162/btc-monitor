@@ -14,27 +14,55 @@
     "rollover_days_before_expiry": 14,
     "followup_days_of_month": [10, 20]
   },
+
+  "strategy_auto": {
+    "enabled": true,
+    "sec_user_agent": "btc-monitor herry162@users.noreply.github.com",
+    "fallback_anchor": {
+      "_說明": "季報解析失敗時才用。之後每週 8-K 的增發、回購會自動加減上去。",
+      "shares": { "as_of": "2026-07-24", "value": 384225751 },
+      "preferred": {
+        "as_of": "2026-08-23",
+        "STRF": 1284000000,
+        "STRC": 9972000000,
+        "STRE": 905000000,
+        "STRK": 1402000000,
+        "STRD": 1402000000
+      },
+      "debt": { "as_of": "2026-08-23", "value": 6714000000 }
+    },
+    "debt_override": null
+  },
+
+  "issuance": {
+    "massive_mstr_weekly_usd_m": 1000,
+    "massive_convert_usd_m": 1000,
+    "lookback_weeks": 52
+  },
+  "breakout": {
+    "lookback": { "1d": 20, "1w": 12 },
+    "volume_ratio": 1.5,
+    "body_ratio": 0.5
+  },
+  "divergence": {
+    "lookback_weeks": 26,
+    "mnav_gap_pct": 10,
+    "crash_weeks": 4,
+    "crash_mnav_pct": 20,
+    "crash_btc_pct": 5
+  },
+  "etf": { "alert_daily_usd_m": 500 },
+  "eur_usd": 1.16,
+
   "strategy_snapshots": [
     {
       "as_of": "2026-10-18",
       "btc_holdings": 848517,
       "shares_outstanding": 384225751,
       "debt_usd": 6714000000,
-      "preferred_usd": {
-        "STRF": 1284000000,
-        "STRC": 8612000000,
-        "STRE": 905000000,
-        "STRK": 1402000000,
-        "STRD": 1402000000
-      },
+      "preferred_usd": { "STRF": 1284000000, "STRC": 8612000000, "STRE": 905000000, "STRK": 1402000000, "STRD": 1402000000 },
       "cash_usd": 5277300000,
-      "_資料來源": {
-        "btc_holdings": "2026-10-18，Strategy 8-K",
-        "cash_usd": "2026-10-18，USD Reserve 48.3 億 + USD Cash 4.473 億",
-        "debt_usd": "2026-08-23，STRD 投資人簡報",
-        "preferred_usd": "STRF、STRE、STRK、STRD 是 2026-08-23 簡報面額；STRC 是推估（8/23 的 99.72 億扣掉之後約 13.6 億回購）",
-        "shares_outstanding": "2026-07-24，10-Q 封面 A 股 364,585,501 + B 股 19,640,250；之後有少量增發"
-      }
+      "_說明": "自動解析完全失敗時才會用這筆"
     }
   ]
 }
