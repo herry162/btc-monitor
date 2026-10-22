@@ -514,6 +514,7 @@
     $("mnav").innerHTML = `
       <div class="mnav-main"><span class="mnav-big">${m.mnav_deck.toFixed(2)}</span>
         <span class="mnav-label">簡報算法：MSTR 股價 ÷ Net BPS${m.live ? "，即時計算" : ""}</span></div>
+      ${!m.live && mStatus ? `<p class="legend" style="margin:6px 0 0">${esc(mStatus)}</p>` : ""}
       <dl class="facts">
         <div><dt>企業價值算法（同官方儀表板類型）</dt><dd>${m.mnav_ev.toFixed(2)}</dd></div>
         <div><dt>舊算法（市值 ÷ BTC 市值）</dt><dd>${m.mnav_old.toFixed(2)}</dd></div>
@@ -683,7 +684,9 @@
     }
     showEtfInfo(null);
     const n = hist.length, since = first.replace(/-/g, "/");
-    $("elegend").textContent = `綠色是淨流入、紅色是淨流出（左軸），橘線是 BTC 價格（右軸）。資料從 ${since} 起共 ${n} 個交易日，來源 ${e.source || "SoSoValue"}，之後每天自動累積。點圖表可以看單日數字。`;
+    const short = e.backfill_done && !e.backfill_param && n < 120
+      ? `SoSoValue 免費接口只提供最近 ${n} 個交易日，之前的歷史拿不到，圖會從這裡開始每天累積。` : "";
+    $("elegend").textContent = `綠色是淨流入、紅色是淨流出（左軸），橘線是 BTC 價格（右軸）。資料從 ${since} 起共 ${n} 個交易日，來源 ${e.source || "SoSoValue"}。${short}點圖表可以看單日數字。`;
   }
 
   document.querySelectorAll("#eseg button").forEach((btn) => btn.addEventListener("click", () => {
@@ -782,35 +785,47 @@
     } catch (_) { /* 下次再試 */ }
   }, 5 * 60 * 1000);
 
-  let mRetry = 0, mVenue = 0, mLastUi = 0;
+  // 24 小時 MSTR：先連 Binance 永續，8 秒內沒收到報價就換 Hyperliquid，兩家輪流重試
+  let mRetry = 0, mVenue = 0, mLastUi = 0, mStatus = "";
   const M_VENUES = [
     { name: "Binance MSTRUSDT 永續", url: "wss://fstream.binance.com/ws/mstrusdt@ticker",
-      sub: null, parse: (m) => (m.e === "24hrTicker" && m.c ? +m.c : null) },
+      subs: [], parse: (m) => (m.e === "24hrTicker" && m.c ? +m.c : null) },
     { name: "Hyperliquid xyz:MSTR 永續", url: "wss://api.hyperliquid.xyz/ws",
-      sub: { method: "subscribe", subscription: { type: "activeAssetCtx", coin: "xyz:MSTR" } },
-      parse: (m) => (m.channel === "activeAssetCtx" && m.data && m.data.ctx ? +(m.data.ctx.midPx || m.data.ctx.markPx) : null) },
+      subs: [{ method: "subscribe", subscription: { type: "allMids", dex: "xyz" } },
+             { method: "subscribe", subscription: { type: "activeAssetCtx", coin: "xyz:MSTR" } }],
+      parse: (m) => {
+        if (m.channel === "allMids" && m.data && m.data.mids) return +(m.data.mids["xyz:MSTR"] || 0) || null;
+        if (m.channel === "activeAssetCtx" && m.data && m.data.ctx) return +(m.data.ctx.midPx || m.data.ctx.markPx) || null;
+        return null;
+      } },
   ];
+  function setMStatus(t) { mStatus = t; if (DATA) renderMnavNumbers(); }
   function connectMstr() {
-    if (!("WebSocket" in window)) return;
+    if (!("WebSocket" in window)) { setMStatus("瀏覽器不支援即時連線"); return; }
     const v = M_VENUES[mVenue % M_VENUES.length];
     let ws, got = false;
-    try { ws = new WebSocket(v.url); } catch (e) { return; }
-    ws.onopen = () => { if (v.sub) ws.send(JSON.stringify(v.sub)); };
+    setMStatus(`MSTR 即時報價：連線 ${v.name.split(" ")[0]} 中…`);
+    try { ws = new WebSocket(v.url); } catch (e) { mVenue++; setTimeout(connectMstr, 2000); return; }
+    const timer = setTimeout(() => { if (!got) { try { ws.close(); } catch (_) {} } }, 8000);
+    ws.onopen = () => { v.subs.forEach((x) => ws.send(JSON.stringify(x))); };
     ws.onmessage = (e) => {
       try {
         const p = v.parse(JSON.parse(e.data));
         if (!p || !isFinite(p)) return;
-        got = true; mRetry = 0;
+        if (!got) { got = true; mRetry = 0; mStatus = ""; }
         liveM = { price: p, venue: v.name, time: Date.now() / 1000 };
         const now = Date.now();
         if (DATA && now - mLastUi > 1000) { mLastUi = now; renderMnavNumbers(); renderSignals(); }
       } catch (_) { /* 略過 */ }
     };
     ws.onclose = () => {
-      if (!got) mVenue++;  // 這家連不上就換下一家
-      setTimeout(connectMstr, Math.min(30000, 2000 * 2 ** mRetry++));
+      clearTimeout(timer);
+      if (!got) mVenue++;                        // 這家沒報價就換下一家
+      const wait = got ? 2000 : Math.min(30000, 1500 * 2 ** Math.floor(mRetry++ / M_VENUES.length));
+      if (!got && mRetry >= M_VENUES.length) setMStatus("MSTR 即時報價連不上，先用約 15 分鐘更新一次的數據");
+      setTimeout(connectMstr, wait);
     };
-    ws.onerror = () => ws.close();
+    ws.onerror = () => { try { ws.close(); } catch (_) {} };
   }
 
   load().then(() => { connectLive(); connectMstr(); });
