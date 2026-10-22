@@ -10,10 +10,13 @@ Strategy（MSTR）SEC 申報自動解析
 """
 
 import datetime as dt
+import gzip
 import json
 import re
 import time
+import urllib.error
 import urllib.request
+import zlib
 from html.parser import HTMLParser
 
 CIK = "0001050446"
@@ -292,14 +295,38 @@ class Edgar:
         self.ua = user_agent
         self._last = 0.0
 
+    @staticmethod
+    def _body(raw, encoding):
+        if encoding == "gzip":
+            raw = gzip.decompress(raw)
+        elif encoding == "deflate":
+            raw = zlib.decompress(raw)
+        return raw.decode("utf-8", errors="replace")
+
     def get(self, url, timeout=30):
         wait = 0.15 - (time.time() - self._last)  # SEC 規定每秒最多 10 次
         if wait > 0:
             time.sleep(wait)
         self._last = time.time()
-        req = urllib.request.Request(url, headers={"User-Agent": self.ua, "Accept": "*/*"})
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return r.read().decode("utf-8", errors="replace")
+        # 照 SEC 文件的建議帶標頭：名字 + email 的 User-Agent，並接受 gzip
+        req = urllib.request.Request(url, headers={
+            "User-Agent": self.ua, "Accept-Encoding": "gzip, deflate",
+            "Accept": "application/json, text/html;q=0.9, */*;q=0.8"})
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return self._body(r.read(), r.headers.get("Content-Encoding"))
+        except urllib.error.HTTPError as e:
+            try:
+                body = self._body(e.read(), e.headers.get("Content-Encoding"))
+            except Exception:
+                body = ""
+            if "Undeclared Automated Tool" in body or "declare your traffic" in body.lower():
+                raise RuntimeError("SEC 拒絕：User-Agent 要有名字和真實 email（設定 SEC_USER_AGENT）") from None
+            if "Request Rate Threshold" in body:
+                raise RuntimeError("SEC 拒絕：請求太頻繁，稍後會自動重試") from None
+            hint = re.sub(r"<[^>]+>", " ", body)
+            hint = re.sub(r"\s+", " ", hint).strip()[:120]
+            raise RuntimeError(f"SEC HTTP {e.code}{('：' + hint) if hint else ''}") from None
 
     def filings(self):
         j = json.loads(self.get(f"https://data.sec.gov/submissions/CIK{CIK}.json"))

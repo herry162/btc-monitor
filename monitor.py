@@ -37,6 +37,7 @@ STATE_PATH = os.path.join(ROOT, "state.json")
 DATA_PATH = os.path.join(ROOT, "docs", "data.json")
 STRATEGY_STORE = os.path.join(ROOT, "data", "strategy.json")
 BTCD_STORE = os.path.join(ROOT, "data", "btcd.json")
+ETF_STORE = os.path.join(ROOT, "data", "etf.json")
 
 UTC = dt.timezone.utc
 TPE = dt.timezone(dt.timedelta(hours=8))
@@ -464,8 +465,41 @@ def _paren_num(s):
     return -v if neg else v
 
 
+def _farside_rows_from_markdown(md):
+    head, rows = None, []
+    for line in md.splitlines():
+        if not line.strip().startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if "Total" in cells and "IBIT" in cells:
+            head = cells
+            continue
+        if head and cells and re.fullmatch(r"\d{1,2} [A-Z][a-z]{2} \d{4}", cells[0]):
+            i_t = max(i for i, c in enumerate(head) if c == "Total")
+            i_i = head.index("IBIT")
+            if len(cells) > i_t and _paren_num(cells[i_t]) is not None:
+                d = dt.datetime.strptime(cells[0], "%d %b %Y").date().isoformat()
+                rows.append({"date": d, "total": _paren_num(cells[i_t]), "ibit": _paren_num(cells[i_i])})
+    return rows[-30:]
+
+
 def farside_flows():
-    """Farside 的比特幣現貨 ETF 每日資金流（百萬美元）"""
+    """Farside 的比特幣現貨 ETF 每日資金流（百萬美元）。直接抓被擋時，改用 r.jina.ai 轉抓。"""
+    try:
+        return _farside_direct()
+    except Exception as e:
+        first = str(e)[:60]
+    try:
+        md = http_get("https://r.jina.ai/https://farside.co.uk/btc/", accept="text/plain", timeout=40)
+        rows = _farside_rows_from_markdown(md)
+        if rows:
+            return rows
+        raise RuntimeError("轉抓結果裡找不到資金流表")
+    except Exception as e2:
+        raise RuntimeError(f"直接抓：{first}；轉抓：{str(e2)[:60]}")
+
+
+def _farside_direct():
     html = http_get("https://farside.co.uk/btc/", accept="text/html")
     tables, _ = sec.parse_html(html)
     for t in tables:
@@ -743,7 +777,8 @@ def build_signals(m, lv, vol_d, vol_w, windows, levels, fin, div, brk, etf, btcd
                     "detail": "；".join(parts), "tone": "up" if last["total"] > 0 else ("down" if last["total"] < 0 else "neutral")})
     else:
         sig.append({"rank": 7, "name": "ETF 資金流", "live": bool(ibit),
-                    "value": "Farside 抓不到", "detail": ibit or etf.get("error", "")})
+                    "value": "Farside 抓不到",
+                    "detail": "；".join(x for x in (ibit, etf.get("error", "")) if x)})
 
     if btcd.get("value") is not None:
         ch = btcd.get("change_7d")
@@ -887,11 +922,14 @@ def run(args):
         else:
             store = load_json(STRATEGY_STORE, {})
             if auto_on:
-                try:
-                    new_filings = sec.update(store, auto_cfg.get("sec_user_agent", "btc-monitor contact@example.com"),
-                                             today, errors.append)
-                except Exception as e:
-                    errors.append(f"SEC：{e}")
+                ua = (os.environ.get("SEC_USER_AGENT") or auto_cfg.get("sec_user_agent") or "").strip()
+                if "@" not in ua:
+                    errors.append("SEC：還沒設定 SEC_USER_AGENT（名字 + email）")
+                else:
+                    try:
+                        new_filings = sec.update(store, ua, today, errors.append)
+                    except Exception as e:
+                        errors.append(f"SEC：{e}")
                 save_json(STRATEGY_STORE, store)
         fallback = dict(auto_cfg.get("fallback_anchor", {}))
         if auto_cfg.get("debt_override"):
@@ -947,10 +985,15 @@ def run(args):
                    "ibit_volume_ratio": 1.2}
             btcd = {"value": 58.4, "change_7d": 0.6}
         else:
-            try:
-                etf["flows"] = farside_flows()
-            except Exception as e:
-                etf["error"] = f"Farside：{str(e)[:80]}"
+            etf_cache = load_json(ETF_STORE, {})
+            if now - etf_cache.get("fetched_at", 0) >= 3 * H1 or not etf_cache.get("flows"):
+                try:
+                    etf_cache = {"fetched_at": now, "flows": farside_flows()}
+                    save_json(ETF_STORE, etf_cache)
+                except Exception as e:
+                    etf["error"] = f"Farside：{str(e)[:120]}"
+            if etf_cache.get("flows"):
+                etf["flows"] = etf_cache["flows"]
             try:
                 etf["ibit_volume_ratio"] = ibit_volume_ratio()
             except Exception:
