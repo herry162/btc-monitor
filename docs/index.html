@@ -211,6 +211,7 @@
     <h2 id="h-mnav">mNAV 與 Net BPS</h2>
     <div id="mnav"></div>
     <div class="chart-box" style="margin-top:12px"><div id="mchart"></div></div>
+    <p class="legend">走勢圖用簡報簡化算法，才能一路畫回過去；官方框架的基準只有最近一份 Strategy 簡報之後才有。兩者通常差 1–2%，背離偵測看的是走勢，不受影響。</p>
     <div id="snap"></div>
   </section>
 
@@ -385,8 +386,12 @@
   // ---------------------------------------------------------------- 指標排行
   function renderSignals() {
     const lm = liveMetrics();
-    const sigs = DATA.signals.map((s) => (s.rank === 2 && lm && lm.mnav_deck != null && lm.live)
-      ? { ...s, value: lm.mnav_deck.toFixed(2) + " 即時" } : s);
+    const sigs = DATA.signals.map((s) => {
+      if (!lm || !lm.live || lm.mnav == null) return s;
+      if (s.rank === 2) return { ...s, value: lm.mnav.toFixed(2) + " 即時" };
+      if (s.rank === 6) return { ...s, value: "$" + f2.format(lm.net_bps) + " 即時" };
+      return s;
+    });
     $("signals").innerHTML = sigs.map((s) => `
       <li class="${s.live ? "" : "pending"}">
         <span class="rank">${s.rank}</span>
@@ -490,35 +495,53 @@
     const mstr = useLive ? liveM.price : DATA.mstr.price;
     const pref = Object.values(st.preferred_usd || {}).reduce((a, b) => a + b, 0);
     const btcVal = st.btc_holdings * btc;
+    // 簡報簡化算法：基本股數、扣掉全部可轉債與優先股（簡報 p.224–229）
     const net = btcVal - st.debt_usd - pref + st.cash_usd;
     const nbps = net / st.shares_outstanding;
     const mcap = mstr * st.shares_outstanding;
-    return {
+    const out = {
       live: useLive, mstr, btc,
       source: useLive ? `${liveM.venue}（即時）` : DATA.mstr.source,
       mnav_deck: nbps > 0 ? mstr / nbps : null,
+      net_bps_deck: nbps,
+      net_bps_sats_deck: net / btc / st.shares_outstanding * 1e8,
       mnav_ev: (mcap + st.debt_usd + pref - st.cash_usd) / btcVal,
       mnav_old: mcap / btcVal,
-      net_bps_usd: nbps,
-      net_bps_sats: net / btc / st.shares_outstanding * 1e8,
+      bps_sats: st.btc_holdings / st.shares_outstanding * 1e8,
+      official: false,
     };
+    // 官方框架：完全稀釋股數、只扣價外可轉債與價外優先股（Strategy 儀表板同算法）
+    const o = st.official;
+    if (o && o.fdso) {
+      const netO = btcVal + st.cash_usd - o.otm_debt_usd - o.otm_preferred_usd;
+      const nb = netO / o.fdso;
+      out.official = true;
+      out.mnav = nb > 0 ? mstr / nb : null;
+      out.net_bps = nb;
+      out.net_bps_sats = netO / btc / o.fdso * 1e8;
+    } else {
+      out.mnav = out.mnav_deck; out.net_bps = out.net_bps_deck; out.net_bps_sats = out.net_bps_sats_deck;
+    }
+    return out;
   }
 
   function renderMnavNumbers() {
     const m = liveMetrics();
-    if (!m || m.mnav_deck == null) {
+    if (!m || m.mnav == null) {
       $("mnav").innerHTML = `<div class="empty">還算不出 mNAV。確認持倉數據和 MSTR 價格都抓得到。</div>`;
       return;
     }
     const ms = DATA.mstr, off = ms.official, prem = m.live && off ? (m.mstr / off.price - 1) * 100 : ms.premium_pct;
+    const basis = m.official ? "官方框架：MSTR 股價 ÷ Net BPS（完全稀釋股數）" : "簡報算法：MSTR 股價 ÷ Net BPS";
     $("mnav").innerHTML = `
-      <div class="mnav-main"><span class="mnav-big">${m.mnav_deck.toFixed(2)}</span>
-        <span class="mnav-label">簡報算法：MSTR 股價 ÷ Net BPS${m.live ? "，即時計算" : ""}</span></div>
+      <div class="mnav-main"><span class="mnav-big">${m.mnav.toFixed(2)}</span>
+        <span class="mnav-label">${basis}${m.live ? "，即時計算" : ""}</span></div>
       ${!m.live && mStatus ? `<p class="legend" style="margin:6px 0 0">${esc(mStatus)}</p>` : ""}
       <dl class="facts">
-        <div><dt>企業價值算法（同官方儀表板類型）</dt><dd>${m.mnav_ev.toFixed(2)}</dd></div>
+        ${m.official ? `<div><dt>簡報簡化算法（基本股數、扣全部負債）</dt><dd>${m.mnav_deck.toFixed(2)}</dd></div>` : ""}
         <div><dt>舊算法（市值 ÷ BTC 市值）</dt><dd>${m.mnav_old.toFixed(2)}</dd></div>
-        <div><dt>Net BPS</dt><dd>$${f2.format(m.net_bps_usd)}</dd></div>
+        <div><dt>企業價值算法（EV ÷ BTC 市值）</dt><dd>${m.mnav_ev.toFixed(2)}</dd></div>
+        <div><dt>Net BPS</dt><dd>$${f2.format(m.net_bps)}</dd></div>
         <div><dt>每股淨 BTC</dt><dd>${f0.format(m.net_bps_sats)} 聰</dd></div>
         <div><dt>MSTR 價格</dt><dd>$${f2.format(m.mstr)}<br><span style="font-size:13px;font-weight:500;color:var(--muted)">${esc(m.source)}</span></dd></div>
         <div><dt>Nasdaq 官方最後成交</dt><dd>${off ? "$" + f2.format(off.price) : "—"}<br><span style="font-size:13px;font-weight:500;color:var(--muted)">${off ? esc(tpe(off.time)) : ""}${prem != null ? `，永續價差 ${prem >= 0 ? "+" : ""}${prem.toFixed(2)}%` : ""}</span></dd></div>
@@ -536,7 +559,7 @@
     const hist = DATA.mnav_history || [];
     if (!hasLib || hist.length < 2) {
       if (mchart) { mchart.remove(); mchart = null; mline = null; }
-      el.innerHTML = `<div class="empty">mNAV 走勢會從持倉快照的日期開始累積。想看更早的走勢，在 config.json 補上過去的快照就會自動回填。</div>`;
+      el.innerHTML = `<div class="empty">mNAV 走勢會從持倉數據的起點開始累積。</div>`;
       return;
     }
     if (!mchart) {
@@ -570,6 +593,12 @@
         Object.entries(st.preferred_usd).map(([k, v]) => `${k} ${B(v)}`).join("、") + (src.preferred_usd ? "。" + src.preferred_usd : "")],
       ["現金", B(st.cash_usd), src.cash_usd],
     ];
+    const o = st.official;
+    if (o) {
+      rows.push(["完全稀釋股數", f0.format(o.fdso), `Strategy ${o.as_of} 簡報基準，之後 8-K 淨增 ${f0.format(o.fdso_delta)} 股`]);
+      rows.push(["價外可轉債", B(o.otm_debt_usd), `Strategy ${o.as_of} 簡報（價內的可轉債改算成股數）`]);
+      rows.push(["價外優先股", B(o.otm_preferred_usd), `Strategy ${o.as_of} 簡報基準，之後 8-K 增減 ${B(o.pref_delta)}`]);
+    }
     $("snap").innerHTML = `
       <details>
         <summary>${st.mode === "auto" ? `持倉自動推算自 SEC 申報（最新 8-K 是 ${st.age_days} 天前）` : `持倉用手動快照 ${esc(st.as_of)}（${st.age_days} 天前）`}，點開看每個數字的來源</summary>
