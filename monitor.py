@@ -584,54 +584,86 @@ def _find_flow_rows(obj):
     return None
 
 
+SOSO_BASE = "https://openapi.sosovalue.com/openapi/v1/etfs/summary-history?symbol=BTC&country_code=US"
+
+
+def _soso_rows(obj):
+    found = _find_flow_rows(obj)
+    if not found:
+        raise RuntimeError("回傳格式找不到淨流入欄位")
+    rows, dk, nk = found
+    keys = rows[0].keys()
+    ak = next((k for k in keys if re.search(r"(total)?.?net.?assets?|aum", k, re.I)
+               and not re.search(r"inflow", k, re.I)), None)
+    out = []
+    for r in rows:
+        v = r.get(nk)
+        if v is None:
+            continue
+        raw = str(r.get(dk))
+        d = raw[:10]
+        if re.fullmatch(r"\d{13}", raw):
+            d = dt.datetime.fromtimestamp(int(raw) / 1000, UTC).date().isoformat()
+        elif re.fullmatch(r"\d{10}", raw):
+            d = dt.datetime.fromtimestamp(int(raw), UTC).date().isoformat()
+        rec = {"date": d, "total": round(float(v) / 1e6, 1), "ibit": None}
+        if ak and r.get(ak) not in (None, ""):
+            try:
+                rec["aum_b"] = round(float(r[ak]) / 1e9, 2)
+            except (TypeError, ValueError):
+                pass
+        out.append(rec)
+    out.sort(key=lambda x: x["date"])
+    return out
+
+
 def sosovalue_flows(key):
-    base = "https://openapi.sosovalue.com/openapi/v1/etfs/summary-history?symbol=BTC&country_code=US&limit="
     h = {"x-soso-api-key": key}
     attempts = [
-        lambda: http_get_json_h(base + "1000", h),
+        lambda: http_get_json_h(SOSO_BASE + "&limit=1000", h),
         lambda: http_post_json("https://openapi.sosovalue.com/api/v1/etf/historicalInflowChart",
                                {"type": "us-btc-spot"}, h),
-        lambda: http_get_json_h(base + "300", h),
-        lambda: http_get_json_h(base + "40", h),
+        lambda: http_get_json_h(SOSO_BASE + "&limit=300", h),
+        lambda: http_get_json_h(SOSO_BASE + "&limit=40", h),
     ]
     best, last = [], None
     for a in attempts:
         try:
-            found = _find_flow_rows(a())
-            if not found:
-                raise RuntimeError("回傳格式找不到淨流入欄位")
-            rows, dk, nk = found
-            keys = rows[0].keys()
-            ak = next((k for k in keys if re.search(r"(total)?.?net.?assets?|aum", k, re.I)
-                       and not re.search(r"inflow", k, re.I)), None)
-            out = []
-            for r in rows:
-                v = r.get(nk)
-                if v is None:
-                    continue
-                raw = str(r.get(dk))
-                d = raw[:10]
-                if re.fullmatch(r"\d{13}", raw):
-                    d = dt.datetime.fromtimestamp(int(raw) / 1000, UTC).date().isoformat()
-                elif re.fullmatch(r"\d{10}", raw):
-                    d = dt.datetime.fromtimestamp(int(raw), UTC).date().isoformat()
-                rec = {"date": d, "total": round(float(v) / 1e6, 1), "ibit": None}
-                if ak and r.get(ak) not in (None, ""):
-                    try:
-                        rec["aum_b"] = round(float(r[ak]) / 1e9, 2)
-                    except (TypeError, ValueError):
-                        pass
-                out.append(rec)
-            out.sort(key=lambda x: x["date"])
+            out = _soso_rows(a())
             if len(out) > len(best):
                 best = out
-            if len(best) >= 250:  # 拿到夠長的歷史就不用再試
+            if len(best) >= 250:
                 break
         except Exception as e:
             last = e
     if best:
         return best
     raise RuntimeError(f"SoSoValue：{str(last)[:60]}")
+
+
+def sosovalue_backfill(key, earliest, param=None, pages=6):
+    """試著往前翻頁補更早的歷史。SoSoValue 沒公開翻頁參數，所以試幾種常見寫法，有用就記下來。"""
+    h = {"x-soso-api-key": key}
+    names = [param] if param else ["end_date", "endDate", "to", "end"]
+    got, used = [], None
+    for name in names:
+        cur = earliest
+        for _ in range(pages):
+            end = (dt.date.fromisoformat(cur) - dt.timedelta(days=1)).isoformat()
+            try:
+                rows = _soso_rows(http_get_json_h(f"{SOSO_BASE}&limit=300&{name}={end}", h))
+            except Exception:
+                break
+            older = [r for r in rows if r["date"] < cur]
+            if not older:
+                break
+            got.extend(older)
+            used = name
+            cur = older[0]["date"]
+            time.sleep(3.5)  # 免費方案每分鐘 20 次
+        if used:
+            break
+    return got, used
 
 
 def http_get_json_h(url, headers):
@@ -1171,7 +1203,15 @@ def run(args):
                     for r in flows:
                         old_r = hist_e.get(r["date"], {})
                         hist_e[r["date"]] = {**old_r, **{k: v for k, v in r.items() if v is not None}}
-                    etf_cache = {"v": 2, "fetched_at": now, "source": src,
+                    bf = etf_cache.get("backfill", {})
+                    key = os.environ.get("SOSOVALUE_API_KEY", "").strip()
+                    if src == "SoSoValue" and key and not bf.get("done") and hist_e:
+                        older, used = sosovalue_backfill(key, min(hist_e), bf.get("param"))
+                        for r in older:
+                            hist_e.setdefault(r["date"], r)
+                        bf = {"param": used or bf.get("param"), "done": not older,
+                              "tries": bf.get("tries", 0) + 1}
+                    etf_cache = {"v": 2, "fetched_at": now, "source": src, "backfill": bf,
                                  "history": [hist_e[d] for d in sorted(hist_e)]}
                     save_json(ETF_STORE, etf_cache)
                 except Exception as e:
@@ -1181,6 +1221,9 @@ def run(args):
                 etf["flows"] = hist_list[-30:]
                 etf["history"] = hist_list
                 etf["source"] = etf_cache.get("source", "SoSoValue")
+                bf = etf_cache.get("backfill", {})
+                etf["backfill_done"] = bool(bf.get("done"))
+                etf["backfill_param"] = bf.get("param")
             try:
                 etf["ibit_volume_ratio"] = ibit_volume_ratio()
             except Exception:
