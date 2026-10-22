@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -17,7 +17,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -48,6 +48,15 @@ jobs:
         with:
           path: state.json
           key: monitor-state-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Save SEC data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A data 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "data: 更新 SEC 解析結果" && (git pull --rebase --autostash && git push) || echo "這次沒推上去，下次會重試"
+          fi
 
       - uses: actions/configure-pages@v5
 
