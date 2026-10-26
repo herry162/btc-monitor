@@ -439,6 +439,13 @@ class Alerter:
         self.dry_run = dry_run
         self.state.setdefault("sent", {})
         self.state.setdefault("log", [])
+        # 清掉警報紀錄裡重複的同一則（保留最新那次）
+        seen_text, clean = set(), []
+        for item in self.state["log"]:
+            if item.get("text") not in seen_text:
+                seen_text.add(item.get("text"))
+                clean.append(item)
+        self.state["log"] = clean
 
     def seen(self, key):
         return key in self.state["sent"]
@@ -447,7 +454,11 @@ class Alerter:
         t = self.state["sent"].get(key)
         return t is None or now_ts() - t >= hours * 3600
 
-    def push(self, key, text):
+    def push(self, key, text, once=True):
+        """同一個 key 預設只發一次；冷卻型警報（接近價位、mNAV、過期提醒）傳 once=False，
+        由呼叫端先用 cooldown_ok 判斷時間到了沒"""
+        if once and self.seen(key):
+            return
         ok = telegram_send(text, self.dry_run)
         if ok or self.dry_run or not telegram_configured():
             # 沒設定 Telegram 時也記錄，避免每次重複印同一則
@@ -511,7 +522,7 @@ def check_approach(alerter, levels, price, threshold, cooldown_h):
         key = f"near:{lev['price']}"
         if alerter.cooldown_ok(key, cooldown_h):
             side = "上方" if price >= lev["price"] else "下方"
-            alerter.push(key, (
+            alerter.push(key, once=False, text=(
                 f"BTC 接近{lev['name']} {usd(lev['price'])}\n"
                 f"現價 {usd(price)}，在價位{side} {dist:.2f}%"))
 
@@ -528,7 +539,7 @@ def check_mnav(alerter, state, m, thresholds, btc, mstr, note=""):
                 continue
             key = f"mnav:{th}:{direction}"
             if alerter.cooldown_ok(key, 12):
-                alerter.push(key, (
+                alerter.push(key, once=False, text=(
                     f"mNAV {verb} {th}\n"
                     f"目前 {m:.3f}，MSTR {mstr:.2f}{note}，BTC {usd(btc)}"))
     if m is not None:
@@ -1305,9 +1316,9 @@ def run(args):
         stale_days = int(cfg.get("snapshot_stale_days", 8))
         if snap_mode == "auto":
             if snap_age is not None and snap_age >= 14 and alerter.cooldown_ok("stale", 72):
-                alerter.push("stale", f"已經 {snap_age} 天沒有新的 Strategy 每週 8-K，持倉可能沒更新到")
+                alerter.push("stale", f"已經 {snap_age} 天沒有新的 Strategy 每週 8-K，持倉可能沒更新到", once=False)
         elif snap_age is not None and snap_age >= stale_days and alerter.cooldown_ok("stale", 72):
-            alerter.push("stale", (f"Strategy 持倉快照已經 {snap_age} 天沒更新（自動解析目前沒有作用）\n"
+            alerter.push("stale", once=False, text=(f"Strategy 持倉快照已經 {snap_age} 天沒更新（自動解析目前沒有作用）\n"
                                    "到 strategy.com 或最新 8-K 抄數字，更新 config.json"))
 
         hour = cfg.get("daily_summary_hour_taipei")
