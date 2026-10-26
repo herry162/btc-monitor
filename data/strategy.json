@@ -2808,6 +2808,45 @@
       "period_end": "2025-09-21",
       "is_update": true,
       "looks_like_update": true
+    },
+    "0001193125-26-431146": {
+      "filed": "2026-10-26",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526431146/mstr-20261026.htm",
+      "v": 2,
+      "atm": {},
+      "repurchase": {
+        "STRF": {
+          "shares": 0.0,
+          "price_m": 0.0
+        },
+        "STRC": {
+          "shares": 2068459.0,
+          "price_m": 204.9
+        },
+        "STRK": {
+          "shares": 0.0,
+          "price_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "price_m": 0.0
+        },
+        "MSTR": {
+          "shares": 0.0,
+          "price_m": 0.0
+        }
+      },
+      "btc": {},
+      "converts": [],
+      "warnings": [
+        "看起來是每週更新，但沒解析到持幣表"
+      ],
+      "period_start": "2026-10-19",
+      "period_end": "2026-10-25",
+      "usd_reserve": 4830000000.0,
+      "usd_cash": 242400000.0,
+      "is_update": true,
+      "looks_like_update": true
     }
   },
   "reports": {
@@ -2915,7 +2954,7 @@
       }
     }
   },
-  "checked_at": 1793018727,
+  "checked_at": 1793019650,
   "backlog_8k": 0,
   "reparse_left": 0
 }
