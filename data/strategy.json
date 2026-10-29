@@ -2859,6 +2859,30 @@
       "warnings": [],
       "is_update": false,
       "looks_like_update": false
+    },
+    "0001193125-26-437776": {
+      "filed": "2026-10-29",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526437776/mstr-20261028.htm",
+      "v": 2,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001050446-26-000047": {
+      "filed": "2026-10-29",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000105044626000047/mstr-20261026.htm",
+      "v": 2,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
     }
   },
   "reports": {
@@ -2966,7 +2990,7 @@
       }
     }
   },
-  "checked_at": 1793304045,
+  "checked_at": 1793304929,
   "backlog_8k": 0,
   "reparse_left": 0
 }
