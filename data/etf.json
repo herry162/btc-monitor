@@ -1,6 +1,6 @@
 {
   "v": 2,
-  "fetched_at": 1793329245,
+  "fetched_at": 1793340923,
   "source": "SoSoValue",
   "backfill": {
     "param": null,
@@ -163,6 +163,11 @@
       "date": "2026-10-28",
       "total": 137.3,
       "aum_b": 104.88
+    },
+    {
+      "date": "2026-10-29",
+      "total": 17.1,
+      "aum_b": 104.27
     }
   ]
 }
