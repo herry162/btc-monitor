@@ -3055,9 +3055,51 @@
         "as_of": "2025-12-31",
         "value": 8250000000.0
       }
+    },
+    "0001050446-26-000060": {
+      "form": "10-Q",
+      "filed": "2026-11-02",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000105044626000060/mstr-20260930.htm",
+      "report_date": "2026-09-30",
+      "warnings": [],
+      "shares": {
+        "as_of": "2026-10-25",
+        "value": 422354607,
+        "class_a": 402714357,
+        "class_b": 19640250
+      },
+      "debt": {
+        "as_of": "2026-09-30",
+        "value": 6750000000.0
+      },
+      "preferred": {
+        "as_of": "2026-09-30",
+        "series": {
+          "STRF": {
+            "value": 1283969000.0,
+            "eur": false
+          },
+          "STRC": {
+            "value": 9096453000.0,
+            "eur": false
+          },
+          "STRE": {
+            "value": 775000000.0,
+            "eur": true
+          },
+          "STRK": {
+            "value": 1402074000.0,
+            "eur": false
+          },
+          "STRD": {
+            "value": 1402422000.0,
+            "eur": false
+          }
+        }
+      }
     }
   },
-  "checked_at": 1793657728,
+  "checked_at": 1793658639,
   "backlog_8k": 0,
   "reparse_left": 0
 }
