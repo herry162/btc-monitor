@@ -142,13 +142,13 @@ npx wrangler deploy
 | `TELEGRAM_CHAT_ID` | 原本就有 |
 | `SEC_USER_AGENT` | `btc-monitor 你的email@…`（SEC 規定要真 email） |
 | `SOSOVALUE_API_KEY` | 可選，ETF 用 |
-| `CF_ACCOUNT_ID` | Cloudflare 帳號 ID（Dashboard 網址或右側邊欄） |
-| `CF_API_TOKEN` | Cloudflare API Token，權限包含 **Account → Workers KV Storage → Edit** |
-| `CF_KV_NAMESPACE_ID` | 與 wrangler.toml 同一個 KV id |
+| `CF_ACCOUNT_ID` | **可選**。若設了，Actions 會額外把 events 推到 KV |
+| `CF_API_TOKEN` | **可選**。Cloudflare API Token（Workers KV Edit） |
+| `CF_KV_NAMESPACE_ID` | **可選**。與 wrangler.toml 同一個 KV id |
 | `GROK_API_KEY` | 可選 |
 
-`CF_*` 三個是為了讓 Actions 把 `events.json` **推到 KV**，網站讀 Worker 才會是最新的。  
-若暫時不設，Worker 會改從 GitHub raw 讀 `data/events.json`（稍微慢一點，但仍可用）。
+**`CF_*` 不是必須的。** Worker 會每最多 60 秒從 GitHub raw（`main/data/events.json`）拉一次並快取到 KV；  
+網站讀 `/events.json` 即可保持新鮮。設了 `CF_*` 只是多一條推送路徑，不設也完全能跑。
 
 ### 第 8 步：告訴網站 Worker 網址
 

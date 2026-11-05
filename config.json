@@ -114,6 +114,6 @@
       "_說明": "自動解析完全失敗時才會用這筆"
     }
   ],
-  "events_worker_url": "",
+  "events_worker_url": "https://btc-monitor-sec.herry162.workers.dev",
   "_events_worker_url": "填 Cloudflare Worker 的網址，例如 https://btc-monitor-sec.xxx.workers.dev ；前端每 60 秒輪詢 /events.json"
 }

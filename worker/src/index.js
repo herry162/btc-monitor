@@ -1,7 +1,7 @@
 /**
  * btc-monitor SEC 偵測 Worker（方案 A：免費混合）
  * - Cron 每分鐘：比對 EDGAR 新 accession → 記 KV → 觸發 GitHub Actions
- * - GET /events.json：從 KV 回傳事件（開 CORS）；沒有就回退到 GitHub raw
+ * - GET /events.json：優先 GitHub raw，KV 快取 60 秒（開 CORS）
  */
 import { fetchRecentAccessions } from "./edgar.js";
 import { dispatchWorkflow } from "./github_dispatch.js";
@@ -21,22 +21,38 @@ function json(data, status = 200) {
 }
 
 async function loadEvents(env) {
+  // 以 GitHub raw 為準；KV 只當 60 秒快取，這樣 Actions 不必推 KV（CF_* 可選）
   const cached = await env.EVENTS_KV.get("events", "json");
-  if (cached && Array.isArray(cached.events)) return cached;
-  // 回退：GitHub raw（Pages 未部署 data/ 時也能讀）
+  const fetchedAt = Number((cached && cached._fetched_at) || 0);
+  const fresh = cached && Array.isArray(cached.events) && Date.now() - fetchedAt < 60_000;
+  if (fresh) {
+    const { _fetched_at, ...rest } = cached;
+    return rest;
+  }
   const repo = env.GITHUB_REPO || "herry162/btc-monitor";
   const url = `https://raw.githubusercontent.com/${repo}/main/data/events.json`;
   try {
     const r = await fetch(url, { headers: { "User-Agent": "btc-monitor-worker" } });
     if (r.ok) {
       const data = await r.json();
-      await env.EVENTS_KV.put("events", JSON.stringify(data));
+      // expirationTtl=60：過期後自動清掉；同時記 _fetched_at 方便判斷
+      await env.EVENTS_KV.put(
+        "events",
+        JSON.stringify({ ...data, _fetched_at: Date.now() }),
+        { expirationTtl: 60 },
+      );
       return data;
     }
+    console.log("raw events status", r.status);
   } catch (e) {
     console.log("raw fallback failed", String(e));
   }
-  return { generated_at: 0, count: 0, events: [] };
+  // raw 失敗時：若還有舊快取就先用
+  if (cached && Array.isArray(cached.events)) {
+    const { _fetched_at, ...rest } = cached;
+    return rest;
+  }
+  return { generated_at: 0, count: 0, events: [], note: "waiting for main/data/events.json" };
 }
 
 async function checkNewFilings(env) {
