@@ -1,6 +1,6 @@
 {
-  "generated_at": 1793863587,
-  "count": 289,
+  "generated_at": 1793863633,
+  "count": 292,
   "events": [
     {
       "accession": "0001193125-20-313349",
@@ -4456,6 +4456,87 @@
       "coupon_rate": null,
       "conversion_price": null,
       "notes": null
+    },
+    {
+      "accession": "0001193125-25-262757",
+      "filed_at": "2025-11-03T17:05:01-05:00",
+      "filed_date": "2025-11-03",
+      "form": "424B5",
+      "period_start": null,
+      "period_end": null,
+      "type": "convert_issue",
+      "security": null,
+      "shares": null,
+      "net_proceeds_usd": 2000000000.0,
+      "notional_usd": 2000000000.0,
+      "btc": null,
+      "avg_price_usd": null,
+      "use_of_proceeds": {
+        "btc_buy_usd": null,
+        "usd_reserve_usd": null,
+        "repurchase_usd": null,
+        "dividend_usd": null
+      },
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525262757/d22199d424b5.htm",
+      "parse_confidence": "high",
+      "stage": "mention",
+      "coupon_rate": null,
+      "conversion_price": null,
+      "notes": "0% convertible senior notes"
+    },
+    {
+      "accession": "0001193125-25-263653",
+      "filed_at": "2025-11-04T08:46:37-05:00",
+      "filed_date": "2025-11-04",
+      "form": "424B2",
+      "period_start": null,
+      "period_end": null,
+      "type": "convert_issue",
+      "security": null,
+      "shares": null,
+      "net_proceeds_usd": 2000000000.0,
+      "notional_usd": 2000000000.0,
+      "btc": null,
+      "avg_price_usd": null,
+      "use_of_proceeds": {
+        "btc_buy_usd": null,
+        "usd_reserve_usd": null,
+        "repurchase_usd": null,
+        "dividend_usd": null
+      },
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525263653/d87896d424b2.htm",
+      "parse_confidence": "high",
+      "stage": "mention",
+      "coupon_rate": null,
+      "conversion_price": null,
+      "notes": "0% 2030 convertible senior notes"
+    },
+    {
+      "accession": "0001193125-25-272591",
+      "filed_at": "2025-11-07T17:18:14-05:00",
+      "filed_date": "2025-11-07",
+      "form": "424B5",
+      "period_start": null,
+      "period_end": null,
+      "type": "convert_issue",
+      "security": null,
+      "shares": null,
+      "net_proceeds_usd": 2000000000.0,
+      "notional_usd": 2000000000.0,
+      "btc": null,
+      "avg_price_usd": null,
+      "use_of_proceeds": {
+        "btc_buy_usd": null,
+        "usd_reserve_usd": null,
+        "repurchase_usd": null,
+        "dividend_usd": null
+      },
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525272591/d22199d424b5.htm",
+      "parse_confidence": "high",
+      "stage": "mention",
+      "coupon_rate": null,
+      "conversion_price": null,
+      "notes": "0% convertible senior notes"
     },
     {
       "accession": "0001193125-25-273310",

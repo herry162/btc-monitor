@@ -7093,6 +7093,290 @@
       "warnings": [],
       "is_update": false,
       "looks_like_update": false
+    },
+    "0001193125-26-442833": {
+      "filed": "2026-11-02",
+      "form": "424B5",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526442833/d124693d424b5.htm",
+      "acceptance": "2026-11-02T14:28:07.000Z",
+      "v": 4,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-26-442832": {
+      "filed": "2026-11-02",
+      "form": "424B5",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526442832/d132417d424b5.htm",
+      "acceptance": "2026-11-02T14:28:05.000Z",
+      "v": 4,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-26-442826": {
+      "filed": "2026-11-02",
+      "form": "424B5",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526442826/d141188d424b5.htm",
+      "acceptance": "2026-11-02T14:24:27.000Z",
+      "v": 4,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-26-442820": {
+      "filed": "2026-11-02",
+      "form": "424B5",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526442820/d185611d424b5.htm",
+      "acceptance": "2026-11-02T14:21:55.000Z",
+      "v": 4,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-26-442740": {
+      "filed": "2026-11-02",
+      "form": "424B3",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526442740/d60250d424b3.htm",
+      "acceptance": "2026-11-02T13:23:03.000Z",
+      "v": 4,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-26-279602": {
+      "filed": "2026-06-23",
+      "form": "424B5",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526279602/d87847d424b5.htm",
+      "acceptance": "2026-06-23T20:38:46.000Z",
+      "v": 4,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-26-208982": {
+      "filed": "2026-05-06",
+      "form": "424B3",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526208982/d36173d424b3.htm",
+      "acceptance": "2026-05-06T20:12:52.000Z",
+      "v": 4,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-26-118806": {
+      "filed": "2026-03-23",
+      "form": "424B5",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526118806/d88043d424b5.htm",
+      "acceptance": "2026-03-23T13:35:56.000Z",
+      "v": 4,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-26-118796": {
+      "filed": "2026-03-23",
+      "form": "424B5",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526118796/d101356d424b5.htm",
+      "acceptance": "2026-03-23T13:31:22.000Z",
+      "v": 4,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-26-118782": {
+      "filed": "2026-03-23",
+      "form": "424B5",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526118782/d824451d424b5.htm",
+      "acceptance": "2026-03-23T13:26:17.000Z",
+      "v": 4,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-26-118657": {
+      "filed": "2026-03-23",
+      "form": "424B2",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526118657/d110473d424b2.htm",
+      "acceptance": "2026-03-23T12:41:33.000Z",
+      "v": 4,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-25-272591": {
+      "filed": "2025-11-07",
+      "form": "424B5",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525272591/d22199d424b5.htm",
+      "acceptance": "2025-11-07T22:18:14.000Z",
+      "v": 4,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [
+        {
+          "principal": 2000000000.0,
+          "kind": "mention",
+          "notes": "0% convertible senior notes"
+        }
+      ],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-25-263900": {
+      "filed": "2025-11-04",
+      "form": "424B5",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525263900/d90859d424b5.htm",
+      "acceptance": "2025-11-04T16:40:58.000Z",
+      "v": 4,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-25-263759": {
+      "filed": "2025-11-04",
+      "form": "424B5",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525263759/d921571d424b5.htm",
+      "acceptance": "2025-11-04T14:53:00.000Z",
+      "v": 4,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-25-263746": {
+      "filed": "2025-11-04",
+      "form": "424B5",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525263746/d919681d424b5.htm",
+      "acceptance": "2025-11-04T14:48:01.000Z",
+      "v": 4,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-25-263731": {
+      "filed": "2025-11-04",
+      "form": "424B5",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525263731/d87888d424b5.htm",
+      "acceptance": "2025-11-04T14:39:15.000Z",
+      "v": 4,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-25-263719": {
+      "filed": "2025-11-04",
+      "form": "424B5",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525263719/d922690d424b5.htm",
+      "acceptance": "2025-11-04T14:29:37.000Z",
+      "v": 4,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-25-263653": {
+      "filed": "2025-11-04",
+      "form": "424B2",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525263653/d87896d424b2.htm",
+      "acceptance": "2025-11-04T13:46:37.000Z",
+      "v": 4,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [
+        {
+          "principal": 2000000000.0,
+          "kind": "mention",
+          "notes": "0% 2030 convertible senior notes"
+        }
+      ],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
+    },
+    "0001193125-25-262757": {
+      "filed": "2025-11-03",
+      "form": "424B5",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525262757/d22199d424b5.htm",
+      "acceptance": "2025-11-03T22:05:01.000Z",
+      "v": 4,
+      "atm": {},
+      "repurchase": {},
+      "btc": {},
+      "converts": [
+        {
+          "principal": 2000000000.0,
+          "kind": "mention",
+          "notes": "0% convertible senior notes"
+        }
+      ],
+      "warnings": [],
+      "is_update": false,
+      "looks_like_update": false
     }
   },
   "reports": {
@@ -7242,7 +7526,7 @@
       }
     }
   },
-  "checked_at": 1793848019,
-  "backlog_8k": 39,
-  "reparse_left": 85
+  "checked_at": 1793863633,
+  "backlog_8k": 0,
+  "reparse_left": 0
 }
