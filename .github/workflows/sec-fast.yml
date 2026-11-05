@@ -1,0 +1,76 @@
+name: sec-fast
+
+# 給 Cloudflare Worker 一偵測到新 accession 就觸發；也可手動跑
+on:
+  workflow_dispatch:
+    inputs:
+      accession:
+        description: "SEC accession（可留空＝照常增量更新）"
+        required: false
+        default: ""
+      form:
+        description: "表單類型"
+        required: false
+        default: ""
+      filed:
+        description: "申報日"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sec-fast
+  cancel-in-progress: false
+
+jobs:
+  parse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore state
+        uses: actions/cache/restore@v4
+        with:
+          path: state.json
+          key: monitor-state-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            monitor-state-
+
+      - name: Parse + alert
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+          SOSOVALUE_API_KEY: ${{ secrets.SOSOVALUE_API_KEY }}
+          GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
+          TRIGGER_ACCESSION: ${{ inputs.accession }}
+        run: |
+          python monitor.py
+          python scripts/backfill_events.py --validate-only || true
+          # validate-only 會重寫 events；若校驗失敗仍保留檔案供網站使用
+
+      - name: Commit data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A data docs/events.json docs/data.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "data: SEC 事件更新" && (git pull --rebase --autostash && git push) || echo "這次沒推上去，下次會重試"
+          fi
+
+      - name: Save state
+        if: always() && hashFiles('state.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: state.json
+          key: monitor-state-${{ github.run_id }}-${{ github.run_attempt }}

@@ -20,7 +20,13 @@ import zlib
 from html.parser import HTMLParser
 
 CIK = "0001050446"
-PARSER_VERSION = 2  # 解析規則改版時加 1，舊的解析結果會在背景逐步重抓
+PARSER_VERSION = 4  # 解析規則改版時加 1，舊的解析結果會在背景逐步重抓
+MONITORED_FORMS = ("8-K", "8-K/A", "10-Q", "10-K", "DEFA14A")
+FORM_PREFIXES = ("424B",)  # 424B2 / 424B3 / 424B5 …
+ATOM_URL = (
+    "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany"
+    "&CIK=0001050446&type=&dateb=&owner=exclude&count=40&output=atom"
+)
 SERIES = ("STRF", "STRC", "STRE", "STRK", "STRD")
 ROW_RE = re.compile(r"^(STRF|STRC|STRK|STRD|STRE|MSTR)\b")
 DATE_PAT = r"([A-Z][a-z]+ \d{1,2}, \d{4})"
@@ -230,7 +236,86 @@ def parse_8k(html):
         keep = max(issues, key=lambda c: c["principal"])
         out["converts"] = [c for c in out["converts"] if c not in issues or c is keep]
 
-    out["is_update"] = bool(out["atm"] or out["btc"] or "usd_reserve" in out)
+    # ---- 表格沒抓到時，改從正文段落補（早期 ATM Update 常沒表格）
+    if not out["atm"]:
+        m = re.search(
+            r"[Dd]uring the period between " + DATE_PAT + r" and " + DATE_PAT +
+            r",?\s+the Company had sold an aggregate of ([\d,]+)\s+Shares under the Sales Agreement"
+            r".{0,120}?aggregate net proceeds to the Company[^$]{0,80}\$\s?([\d.,]+)\s*(billion|million)",
+            text)
+        if m:
+            out["period_start"], out["period_end"] = _date(m.group(1)), _date(m.group(2))
+            out["atm"]["MSTR"] = {
+                "shares": float(m.group(3).replace(",", "")),
+                "notional_m": 0.0,
+                "proceeds_m": _money(m.group(4), m.group(5)) / 1e6,
+            }
+    if "period_start" not in out:
+        m = re.search(r"[Dd]uring the period between " + DATE_PAT + r" and " + DATE_PAT, text)
+        if m:
+            out["period_start"], out["period_end"] = _date(m.group(1)), _date(m.group(2))
+        else:
+            m = re.search(r"Period " + DATE_PAT + r" to " + DATE_PAT, text)
+            if m:
+                out["period_start"], out["period_end"] = _date(m.group(1)), _date(m.group(2))
+
+    if not out["btc"]:
+        m = re.search(
+            r"(?:acquired|purchased)\s+approximately\s+([\d,]+)\s+bitcoins?\s+for\s+approximately\s+"
+            r"\$\s?([\d.,]+)\s*(billion|million).*?average price of approximately\s+\$\s?([\d,]+)",
+            text, re.I | re.S)
+        hold = re.search(
+            r"held an aggregate of approximately\s+([\d,]+)\s+bitcoins?", text, re.I)
+        sold = re.search(
+            r"(?:sold|sale of)\s+approximately\s+([\d,]+)\s+bitcoins?", text, re.I)
+        if m or hold or sold:
+            out["btc"] = {
+                "holdings": float(hold.group(1).replace(",", "")) if hold else 0.0,
+                "purchased": float(m.group(1).replace(",", "")) if m else 0.0,
+                "sold": float(sold.group(1).replace(",", "")) if sold else 0.0,
+            }
+            if m:
+                out["btc"]["avg_price"] = float(m.group(4).replace(",", ""))
+                out["btc"]["purchase_usd"] = _money(m.group(2), m.group(3))
+
+    # 交割完成：The aggregate principal amount of the notes sold in the offering was $X
+    for m in re.finditer(
+            r"aggregate principal amount of the notes sold in the offering was\s+"
+            r"\$\s?([\d.,]+)\s*(billion|million)",
+            text, re.I):
+        out["converts"].append({
+            "principal": _money(m.group(1), m.group(2)),
+            "kind": "closing",
+            "notes": "convertible senior notes",
+        })
+    # 可轉債回購（正文）：例如 2026-05-15 8-K
+    for m in re.finditer(
+            r"[Rr]epurchase(?:d|s)?\s+approximately\s+\$\s?([\d.,]+)\s*(billion|million)\s+"
+            r"aggregate principal amount of the\s+(\d{4})\s+Notes"
+            r".{0,200}?aggregate cash repurchase price of approximately\s+\$\s?([\d.,]+)\s*(billion|million)",
+            text, re.S):
+        out.setdefault("convert_repurchases", []).append({
+            "principal": _money(m.group(1), m.group(2)),
+            "cash": _money(m.group(4), m.group(5)),
+            "notes_year": m.group(3),
+            "kind": "repurchase",
+        })
+    # 公司債／擔保貸款簡記
+    for m in re.finditer(
+            r"\$\s?([\d.,]+)\s*(billion|million)\s+aggregate principal amount of\s+"
+            r"(?:its\s+|our\s+|the\s+)?([^.;]{0,60}?(?:Senior Secured Notes|Senior Notes)(?!\s+due))",
+            text, re.I):
+        # 略過已歸類為 convertible 的句子
+        span = text[max(0, m.start() - 40):m.end() + 40]
+        if re.search(r"convertible", span, re.I):
+            continue
+        out.setdefault("other_debt", []).append({
+            "principal": _money(m.group(1), m.group(2)),
+            "notes": _clean(m.group(3)),
+        })
+
+    out["is_update"] = bool(out["atm"] or out["btc"] or "usd_reserve" in out
+                            or out.get("convert_repurchases") or out.get("repurchase"))
     out["looks_like_update"] = bool(re.search(r"\b(ATM Update|BTC Update)\b", text))
     if out["looks_like_update"] and not out["btc"]:
         out["warnings"].append("看起來是每週更新，但沒解析到持幣表")
@@ -336,14 +421,56 @@ class Edgar:
             hint = re.sub(r"\s+", " ", hint).strip()[:120]
             raise RuntimeError(f"SEC HTTP {e.code}{('：' + hint) if hint else ''}") from None
 
-    def filings(self):
-        j = json.loads(self.get(f"https://data.sec.gov/submissions/CIK{CIK}.json"))
-        r = j["filings"]["recent"]
+    def _rows_from_block(self, block):
         out = []
-        for i in range(len(r["accessionNumber"])):
-            out.append({"form": r["form"][i], "filed": r["filingDate"][i],
-                        "report_date": r["reportDate"][i], "accession": r["accessionNumber"][i],
-                        "doc": r["primaryDocument"][i]})
+        n = len(block["accessionNumber"])
+        adt = block.get("acceptanceDateTime") or [None] * n
+        for i in range(n):
+            out.append({
+                "form": block["form"][i],
+                "filed": block["filingDate"][i],
+                "report_date": block.get("reportDate", [""])[i] if block.get("reportDate") else "",
+                "accession": block["accessionNumber"][i],
+                "doc": block["primaryDocument"][i],
+                "acceptance": adt[i],
+            })
+        return out
+
+    def filings(self, since="2020-08-01"):
+        """含 filings.files 分頁，回傳 since 之後的申報（新到舊）。"""
+        j = json.loads(self.get(f"https://data.sec.gov/submissions/CIK{CIK}.json"))
+        rows = self._rows_from_block(j["filings"]["recent"])
+        for meta in j["filings"].get("files", []):
+            page = json.loads(self.get(f"https://data.sec.gov/submissions/{meta['name']}"))
+            rows.extend(self._rows_from_block(page))
+        # 去重、過濾日期
+        seen, out = set(), []
+        for f in rows:
+            if f["accession"] in seen:
+                continue
+            if since and f["filed"] < since:
+                continue
+            seen.add(f["accession"])
+            out.append(f)
+        out.sort(key=lambda x: (x["filed"], x.get("acceptance") or ""), reverse=True)
+        return out
+
+    def atom_accessions(self):
+        """公司 Atom feed 裡較新的 accession（哪個源較快用哪個）。"""
+        try:
+            xml = self.get(ATOM_URL)
+        except Exception:
+            return []
+        out = []
+        for m in re.finditer(
+                r"<id>.*?accession-number=([0-9-]+)[^<]*</id>.*?<updated>([^<]+)</updated>"
+                r".*?<category[^>]*term=\"([^\"]+)\"",
+                xml, re.S | re.I):
+            out.append({"accession": m.group(1), "updated": m.group(2), "form": m.group(3)})
+        # 備援：只抓 accession
+        if not out:
+            for m in re.finditer(r"accession-number=([0-9-]+)", xml):
+                out.append({"accession": m.group(1), "updated": None, "form": None})
         return out
 
     @staticmethod
@@ -351,26 +478,42 @@ class Edgar:
         return (f"https://www.sec.gov/Archives/edgar/data/{int(CIK)}/"
                 f"{f['accession'].replace('-', '')}/{f['doc']}")
 
+    @staticmethod
+    def is_monitored(form):
+        if form in MONITORED_FORMS:
+            return True
+        return any(form.startswith(p) for p in FORM_PREFIXES)
+
 
 def update(store, user_agent, today, log, max_8k=40, max_reports=1, lookback_days=400):
     """抓新申報、解析後存進 store。回傳這次新增的 8-K 清單。"""
     store.setdefault("filings", {})
     store.setdefault("reports", {})
     ed = Edgar(user_agent)
-    listing = ed.filings()
     cutoff = (today - dt.timedelta(days=lookback_days)).isoformat()
+    listing = ed.filings(since=cutoff)
     new = []
 
-    eightk = [f for f in listing if f["form"] in ("8-K", "8-K/A") and f["filed"] >= cutoff
-              and f["accession"] not in store["filings"]]
+    eightk = [f for f in listing if f["form"] in ("8-K", "8-K/A", "DEFA14A")
+              and f["filed"] >= cutoff and f["accession"] not in store["filings"]]
+    # 424B 也抓，但解析較鬆（多半是募集說明書）
+    extras = [f for f in listing if Edgar.is_monitored(f["form"])
+              and f["form"] not in ("8-K", "8-K/A", "DEFA14A", "10-Q", "10-K")
+              and f["filed"] >= cutoff and f["accession"] not in store["filings"]]
+    eightk = eightk + extras
     eightk.sort(key=lambda f: f["filed"], reverse=True)  # 先抓最新的
     for f in eightk[:max_8k]:
         try:
-            p = parse_8k(ed.get(Edgar.url(f)))
+            html = ed.get(Edgar.url(f))
+            if f["form"].startswith("424B"):
+                p = parse_8k(html)  # 重用表格／可轉債規則；失敗也無害
+            else:
+                p = parse_8k(html)
         except Exception as e:  # 單一份失敗不影響其他
-            log(f"8-K {f['filed']} 解析失敗：{e}")
+            log(f"{f['form']} {f['filed']} 解析失敗：{e}")
             continue
-        rec = {"filed": f["filed"], "url": Edgar.url(f), "v": PARSER_VERSION, **p}
+        rec = {"filed": f["filed"], "form": f["form"], "url": Edgar.url(f),
+               "acceptance": f.get("acceptance"), "v": PARSER_VERSION, **p}
         store["filings"][f["accession"]] = rec
         new.append(rec)
 
@@ -381,7 +524,8 @@ def update(store, user_agent, today, log, max_8k=40, max_reports=1, lookback_day
     for acc, f in stale[:room]:
         try:
             p = parse_8k(ed.get(f["url"]))
-            store["filings"][acc] = {"filed": f["filed"], "url": f["url"], "v": PARSER_VERSION, **p}
+            store["filings"][acc] = {"filed": f["filed"], "form": f.get("form", "8-K"), "url": f["url"],
+                               "acceptance": f.get("acceptance"), "v": PARSER_VERSION, **p}
         except Exception as e:
             log(f"8-K {f['filed']} 重新解析失敗：{e}")
     store["reparse_left"] = max(0, len(stale) - room)
@@ -556,3 +700,180 @@ def percentile_rank(values, x):
     if not values:
         return None
     return round(100 * sum(1 for v in values if v <= x) / len(values))
+
+
+# ---------------------------------------------------------------- 事件扁平化（給圖表／Telegram／Worker）
+
+def acceptance_to_et_iso(acceptance):
+    """SEC acceptanceDateTime（通常是 UTC，帶 Z）→ 美東 ISO 字串。"""
+    if not acceptance:
+        return None
+    s = acceptance.strip().replace("Z", "+00:00")
+    try:
+        when = dt.datetime.fromisoformat(s)
+    except ValueError:
+        return acceptance
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=dt.timezone.utc)
+    # 美東：用固定偏移不夠（有夏令時）；用 zoneinfo 若可用，否則粗略判斷
+    try:
+        from zoneinfo import ZoneInfo
+        return when.astimezone(ZoneInfo("America/New_York")).isoformat()
+    except Exception:
+        # 粗略：3–11 月當 EDT (UTC-4)，其餘 EST (UTC-5)
+        off = -4 if 3 <= when.month <= 11 else -5
+        return when.astimezone(dt.timezone(dt.timedelta(hours=off))).isoformat()
+
+
+def _event_base(accession, rec, etype, confidence="high"):
+    return {
+        "accession": accession,
+        "filed_at": acceptance_to_et_iso(rec.get("acceptance")) or (rec.get("filed") + "T00:00:00-05:00"),
+        "filed_date": rec.get("filed"),
+        "form": rec.get("form", "8-K"),
+        "period_start": rec.get("period_start"),
+        "period_end": rec.get("period_end"),
+        "type": etype,
+        "security": None,
+        "shares": None,
+        "net_proceeds_usd": None,
+        "notional_usd": None,
+        "btc": None,
+        "avg_price_usd": None,
+        "use_of_proceeds": {"btc_buy_usd": None, "usd_reserve_usd": None,
+                            "repurchase_usd": None, "dividend_usd": None},
+        "source_url": rec.get("url"),
+        "parse_confidence": confidence,
+        "stage": None,
+        "coupon_rate": None,
+        "conversion_price": None,
+        "notes": None,
+    }
+
+
+def filing_to_events(accession, rec):
+    """一份申報 → 多筆事件（ATM／買幣／賣幣／回購／可轉債…各一條）。"""
+    events = []
+    atm = rec.get("atm") or {}
+    for ser, row in atm.items():
+        shares = float(row.get("shares") or 0)
+        proceeds_m = float(row.get("proceeds_m") or 0)
+        notional_m = float(row.get("notional_m") or 0)
+        if shares <= 0 and proceeds_m <= 0:
+            continue
+        ev = _event_base(accession, rec, "mstr_atm" if ser == "MSTR" else "pref_atm")
+        ev["security"] = ser
+        ev["shares"] = shares
+        ev["net_proceeds_usd"] = proceeds_m * 1e6
+        ev["notional_usd"] = notional_m * 1e6 if notional_m else None
+        events.append(ev)
+
+    rep = rec.get("repurchase") or {}
+    for ser, row in rep.items():
+        shares = float(row.get("shares") or 0)
+        price_m = float(row.get("price_m") or 0)
+        if shares <= 0 and price_m <= 0:
+            continue
+        if ser == "MSTR":
+            etype = "mstr_repurchase"
+        else:
+            etype = "pref_repurchase"
+        ev = _event_base(accession, rec, etype)
+        ev["security"] = ser
+        ev["shares"] = shares
+        ev["net_proceeds_usd"] = price_m * 1e6  # 回購付出的現金
+        events.append(ev)
+
+    btc = rec.get("btc") or {}
+    if btc.get("purchased"):
+        ev = _event_base(accession, rec, "btc_buy")
+        ev["btc"] = float(btc["purchased"])
+        ev["avg_price_usd"] = btc.get("avg_price")
+        if btc.get("purchase_usd"):
+            ev["net_proceeds_usd"] = float(btc["purchase_usd"])
+            ev["use_of_proceeds"]["btc_buy_usd"] = float(btc["purchase_usd"])
+        events.append(ev)
+    if btc.get("sold"):
+        ev = _event_base(accession, rec, "btc_sell")
+        ev["btc"] = float(btc["sold"])
+        events.append(ev)
+
+    if "usd_reserve" in rec:
+        ev = _event_base(accession, rec, "usd_reserve")
+        ev["net_proceeds_usd"] = float(rec["usd_reserve"]) + float(rec.get("usd_cash") or 0)
+        ev["use_of_proceeds"]["usd_reserve_usd"] = float(rec["usd_reserve"])
+        events.append(ev)
+
+    stage_map = {"proposed": "announced", "pricing": "priced", "closing": "settled",
+                 "retire": "retired", "mention": "mention", "repurchase": "repurchase"}
+    for c in rec.get("converts") or []:
+        kind = c.get("kind") or "mention"
+        if kind == "retire":
+            etype = "convert_repurchase"
+        else:
+            etype = "convert_issue"
+        ev = _event_base(accession, rec, etype)
+        ev["notional_usd"] = float(c.get("principal") or 0)
+        ev["net_proceeds_usd"] = float(c.get("principal") or 0)
+        ev["stage"] = stage_map.get(kind, kind)
+        ev["notes"] = c.get("notes")
+        ev["coupon_rate"] = c.get("coupon_rate")
+        ev["conversion_price"] = c.get("conversion_price")
+        events.append(ev)
+
+    for c in rec.get("convert_repurchases") or []:
+        ev = _event_base(accession, rec, "convert_repurchase")
+        ev["notional_usd"] = float(c.get("principal") or 0)
+        ev["net_proceeds_usd"] = float(c.get("cash") or 0)
+        ev["stage"] = "announced"
+        ev["notes"] = f"{c.get('notes_year', '')} Notes"
+        events.append(ev)
+
+    for d in rec.get("other_debt") or []:
+        ev = _event_base(accession, rec, "other_debt")
+        ev["notional_usd"] = float(d.get("principal") or 0)
+        ev["net_proceeds_usd"] = float(d.get("principal") or 0)
+        ev["notes"] = d.get("notes")
+        events.append(ev)
+
+    # 解析警告 → 降低信心
+    if rec.get("warnings"):
+        for ev in events:
+            if ev["parse_confidence"] == "high":
+                ev["parse_confidence"] = "medium"
+    return events
+
+
+def store_to_events(store):
+    """整個 strategy store → 依 filed_at 排序的事件列表（accession+type+security 去重）。"""
+    seen, events = set(), []
+    for acc, rec in store.get("filings", {}).items():
+        for ev in filing_to_events(acc, rec):
+            key = (ev["accession"], ev["type"], ev.get("security"), ev.get("stage"),
+                   ev.get("btc"), ev.get("shares"), ev.get("notional_usd"))
+            if key in seen:
+                continue
+            seen.add(key)
+            events.append(ev)
+    events.sort(key=lambda e: (e.get("filed_at") or "", e.get("type") or ""))
+    return events
+
+
+# 已知可轉債交割（用來校驗回填）；金額單位美元
+KNOWN_CONVERT_SETTLEMENTS = [
+    ("2020-12-11", 650_000_000),
+    ("2021-02-19", 1_050_000_000),
+    ("2024-03-08", 800_000_000),
+    ("2024-03-18", 603_750_000),
+    ("2024-06-17", 800_000_000),
+    ("2024-09-19", 1_010_000_000),
+    ("2024-11-21", 3_000_000_000),
+    ("2025-02-21", 2_000_000_000),
+]
+# 2026-05-15 8-K（5/14 宣布）：約 $1.38B 現金回購 $1.50B 面額 2029 可轉債
+KNOWN_CONVERT_REPURCHASE = {
+    "filed": "2026-05-15",
+    "principal": 1_500_000_000,
+    "cash": 1_380_000_000,
+    "tol": 20_000_000,  # 「約」允許誤差
+}
