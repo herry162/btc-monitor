@@ -1,0 +1,7 @@
+# local
+state.json
+__pycache__/
+worker/node_modules/
+worker/.wrangler/
+*.pyc
+.DS_Store

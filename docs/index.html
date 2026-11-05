@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.2.1/dist/lightweight-charts.standalone.production.js"></script>
 <style>
   :root {
     color-scheme: light;
@@ -150,6 +150,11 @@
 
   /* ---------- mNAV ---------- */
   .mnav-main { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .badge { display:inline-block; margin-left:8px; padding:2px 8px; border-radius:999px; background:var(--warn); color:#fff; font-size:12px; font-weight:600; }
+  .ev-filters { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0; }
+  .ev-filters label { font-size:12px; color:var(--muted); background:var(--panel); border:1px solid var(--line); border-radius:999px; padding:4px 10px; display:flex; gap:6px; align-items:center; }
+  .ev-detail { margin-top:10px; padding:12px; background:var(--panel); border:1px solid var(--line); border-radius:12px; font-size:14px; line-height:1.55; }
+  .ev-detail a { color:var(--btc); }
   .mnav-big { font-family: var(--num); font-weight: 600; font-size: 44px; line-height: 1; }
   .mnav-label { color: var(--muted); font-size: 14px; }
   .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 20px; margin: 16px 0; }
@@ -216,9 +221,23 @@
   </section>
 
   <section aria-labelledby="h-fin">
-    <h2 id="h-fin">Strategy 每週融資</h2>
-    <div class="chart-box"><div id="fchart"></div></div>
-    <p class="legend" id="flegend"></p>
+    <div class="chart-head">
+      <h2 id="h-fin">Strategy 融資事件</h2>
+      <span id="newev" class="badge" hidden>新公告</span>
+      <div class="seg" role="group" aria-label="日線或週線" id="evtf">
+        <button type="button" data-evtf="1d" aria-pressed="true">日</button>
+        <button type="button" data-evtf="1w" aria-pressed="false">週</button>
+      </div>
+    </div>
+    <div class="ev-filters" id="evfilters" aria-label="事件類型篩選"></div>
+    <div class="seg" role="group" aria-label="時間範圍" id="evrange" style="margin:8px 0">
+      <button type="button" data-r="90" aria-pressed="false">3M</button>
+      <button type="button" data-r="365" aria-pressed="true">1Y</button>
+      <button type="button" data-r="all" aria-pressed="false">全部</button>
+    </div>
+    <div class="chart-box" style="height:min(72vh,640px)"><div id="fchart" style="height:100%"></div></div>
+    <p class="legend" id="flegend">上：BTC 日線｜中：MSTR｜下：融資／回購／賣幣金額（回購與賣幣為負）｜底：mNAV。點柱子看明細。時間顯示美東與台灣。</p>
+    <div id="evdetail" class="ev-detail" hidden></div>
     <div id="fin"></div>
   </section>
 
@@ -269,7 +288,20 @@
   let live = { price: null, ok: false };
   let chart = null, S = {}, priceLines = [];
   let mchart = null, mline = null, mLines = [];
-  let fchart = null, fbars = null, fLine = null;
+  let fchart = null, fSeries = {}, fLine = null;
+  let EVENTS = { events: [], generated_at: 0 };
+  let evTf = "1d", evRange = "365";
+  const EV_TYPES = [
+    ["mstr_atm","MSTR ATM","#b86200"],
+    ["pref_atm","優先股 ATM","#3c64aa"],
+    ["convert_issue","可轉債發行","#12804f"],
+    ["convert_repurchase","可轉債回購","#8a6a00"],
+    ["pref_repurchase","優先股回購","#5a6a77"],
+    ["mstr_repurchase","MSTR 回購","#5a6a77"],
+    ["btc_sell","賣 BTC","#c2382f"],
+    ["btc_buy","買 BTC","#2a9d8f"],
+  ];
+  let evEnabled = Object.fromEntries(EV_TYPES.map(([k]) => [k, true]));
   let echart = null, ebars = null, eline = null, eRange = "365", eBy = {}, eBtc = {}, eLast = null;
   const hasLib = typeof window.LightweightCharts !== "undefined";
 
@@ -296,6 +328,7 @@
     renderSignals();
     renderChart();
     renderMnav();
+    loadEvents(false);
     renderFinancing();
     renderEtf();
     renderAlerts();
@@ -446,11 +479,11 @@
     const el = $("chart");
     if (!hasLib) { el.innerHTML = `<div class="empty">圖表元件載入失敗，檢查網路後重新整理。</div>`; return; }
     chart = LightweightCharts.createChart(el, { autoSize: true, ...theme() });
-    S.bands = chart.addHistogramSeries({ priceScaleId: "bands", lastValueVisible: false, priceLineVisible: false });
+    S.bands = chart.addSeries(LightweightCharts.HistogramSeries, { priceScaleId: "bands", lastValueVisible: false, priceLineVisible: false });
     chart.priceScale("bands").applyOptions({ scaleMargins: { top: 0, bottom: 0 } });
-    S.vol = chart.addHistogramSeries({ priceScaleId: "vol", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
+    S.vol = chart.addSeries(LightweightCharts.HistogramSeries, { priceScaleId: "vol", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
     chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
-    S.candle = chart.addCandlestickSeries({ borderVisible: false });
+    S.candle = chart.addSeries(LightweightCharts.CandlestickSeries, { borderVisible: false });
     applySeriesColors();
   }
 
@@ -566,7 +599,7 @@
       el.innerHTML = "";
       mchart = LightweightCharts.createChart(el, { autoSize: true, ...theme(),
         timeScale: { borderColor: css("--line"), timeVisible: false } });
-      mline = mchart.addLineSeries({ lineWidth: 2, priceLineVisible: false });
+      mline = mchart.addSeries(LightweightCharts.LineSeries, { lineWidth: 2, priceLineVisible: false });
     }
     mchart.applyOptions(theme());
     mchart.applyOptions({ timeScale: { timeVisible: false } });
@@ -608,49 +641,222 @@
       </details>`;
   }
 
-  // ---------------------------------------------------------------- 每週融資
-  const fmtM = (v) => v >= 1000 ? "$" + (v / 1000).toFixed(2) + "B" : "$" + f0.format(v) + "M";
+  // ---------------------------------------------------------------- Strategy 融資事件多窗格
+  const fmtM = (v) => Math.abs(v) >= 1000 ? ((v<0?"−":"") + "$" + (Math.abs(v) / 1000).toFixed(2) + "B")
+    : ((v<0?"−":"") + "$" + f0.format(Math.abs(v)) + "M");
+  const daySec = (s) => {
+    if (s == null) return null;
+    if (typeof s === "number") return s;
+    s = String(s);
+    if (s.length < 10) return null;
+    return Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) / 1000;
+  };
+  const typeColor = Object.fromEntries(EV_TYPES.map(([k, , c]) => [k, c]));
+
+  function eventBarValueM(ev) {
+    // 柱狀圖單位：百萬美元；回購／賣幣畫成負值
+    const neg = new Set(["convert_repurchase","pref_repurchase","mstr_repurchase","btc_sell"]);
+    let usd = ev.net_proceeds_usd;
+    if (usd == null) usd = ev.notional_usd;
+    if (usd == null && ev.btc && ev.avg_price_usd) usd = ev.btc * ev.avg_price_usd;
+    if (usd == null && ev.type === "btc_sell" && ev.btc) usd = ev.btc * 100000; // 粗估，僅佔位
+    if (usd == null) return 0;
+    const m = usd / 1e6;
+    return neg.has(ev.type) ? -Math.abs(m) : Math.abs(m);
+  }
+
+  function weekKey(sec) {
+    const d = new Date(sec * 1000);
+    const day = (d.getUTCDay() + 6) % 7;
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day) / 1000;
+  }
+
+  function buildEventBars() {
+    const rows = (EVENTS.events || []).filter((e) => evEnabled[e.type]);
+    const by = {};
+    for (const e of rows) {
+      const d = e.filed_date || (e.filed_at || "").slice(0, 10);
+      if (!d) continue;
+      let t = daySec(d);
+      if (evTf === "1w") t = weekKey(t);
+      const v = eventBarValueM(e);
+      if (!by[t]) by[t] = { time: t, value: 0, color: typeColor[e.type] || css("--muted"), items: [] };
+      by[t].value += v;
+      by[t].items.push(e);
+      by[t].color = typeColor[e.type] || by[t].color;
+    }
+    return Object.values(by).sort((a, b) => a.time - b.time);
+  }
+
+  function showEventDetail(items, t) {
+    const el = $("evdetail");
+    if (!items || !items.length) { el.hidden = true; el.innerHTML = ""; return; }
+    const when = new Date(t * 1000);
+    const et = when.toLocaleString("en-US", { timeZone: "America/New_York", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+    const tw = when.toLocaleString("zh-TW", { timeZone: "Asia/Taipei", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+    const lines = items.map((e) => {
+      const bits = [`<b>${esc(e.type)}</b>`];
+      if (e.security) bits.push(esc(e.security));
+      if (e.shares) bits.push(`${f0.format(e.shares)} 股`);
+      if (e.net_proceeds_usd != null) bits.push(fmtM(e.net_proceeds_usd / 1e6));
+      if (e.btc) bits.push(`${f0.format(e.btc)} BTC`);
+      if (e.period_start && e.period_end) bits.push(`期間 ${esc(e.period_start)}～${esc(e.period_end)}`);
+      if (e.source_url) bits.push(`<a href="${esc(e.source_url)}" target="_blank" rel="noopener">原文</a>`);
+      return `<li>${bits.join(" · ")}</li>`;
+    });
+    el.hidden = false;
+    el.innerHTML = `<div>美東 ${esc(et)}｜台灣 ${esc(tw)}</div><ul>${lines.join("")}</ul>`;
+  }
+
+  async function loadEvents(showBadge) {
+    const urls = [];
+    const w = (DATA && DATA.events_worker_url) || "";
+    if (w) urls.push(w.replace(/\/$/, "") + "/events.json");
+    urls.push("events.json?t=" + Date.now());
+    let data = null, fromWorker = false;
+    for (const u of urls) {
+      try {
+        const r = await fetch(u, { cache: "no-store" });
+        if (!r.ok) continue;
+        data = await r.json();
+        fromWorker = u.includes("workers.dev") || u.includes("/events.json") && w && u.startsWith(w);
+        break;
+      } catch (e) { /* try next */ }
+    }
+    if (!data || !Array.isArray(data.events)) return;
+    const prev = EVENTS.generated_at || 0;
+    EVENTS = data;
+    if (showBadge && data.generated_at > prev && prev > 0) {
+      const b = $("newev"); if (b) { b.hidden = false; setTimeout(() => { b.hidden = true; }, 15000); }
+    }
+    if (DATA) renderFinancing();
+  }
+
   function renderFinancing() {
     const fin = DATA.financing || {};
     const weeks = fin.weeks || [];
     const el = $("fchart");
-    if (!weeks.length) {
-      if (fchart) { fchart.remove(); fchart = null; fbars = null; }
-      el.innerHTML = `<div class="empty">還沒有 SEC 資料。第一次執行會補抓過去一年的 8-K，大約一小時內完成。</div>`;
-      $("flegend").textContent = "";
-      $("fin").innerHTML = "";
+    // 篩選 UI
+    const box = $("evfilters");
+    if (box && !box.dataset.ready) {
+      box.innerHTML = EV_TYPES.map(([k, label, color]) =>
+        `<label><input type="checkbox" data-k="${k}" checked> <span style="color:${color}">●</span> ${esc(label)}</label>`).join("");
+      box.dataset.ready = "1";
+      box.addEventListener("change", (e) => {
+        const inp = e.target.closest("input[data-k]");
+        if (!inp) return;
+        evEnabled[inp.dataset.k] = inp.checked;
+        renderFinancing();
+      });
+      $("evtf").addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-evtf]");
+        if (!btn) return;
+        evTf = btn.dataset.evtf;
+        [...$("evtf").querySelectorAll("button")].forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+        renderFinancing();
+      });
+      $("evrange").addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-r]");
+        if (!btn) return;
+        evRange = btn.dataset.r;
+        [...$("evrange").querySelectorAll("button")].forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+        renderFinancing();
+      });
+    }
+
+    if (!hasLib) {
+      el.innerHTML = `<div class="empty">圖表元件載入失敗。</div>`;
       return;
     }
-    if (hasLib) {
-      if (!fchart) {
-        el.innerHTML = "";
-        fchart = LightweightCharts.createChart(el, { autoSize: true, ...theme(), timeScale: { borderColor: css("--line"), timeVisible: false } });
-        fbars = fchart.addHistogramSeries({ priceLineVisible: false, lastValueVisible: false, priceFormat: { type: "custom", formatter: (v) => fmtM(v) } });
-      }
-      fchart.applyOptions(theme());
-      fchart.applyOptions({ timeScale: { timeVisible: false } });
-      const day = (s) => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) / 1000;
-      fbars.setData(weeks.map((w) => ({ time: day(w.period_end), value: w.mstr_proceeds_m,
-        color: w.mstr_proceeds_m >= fin.massive_m ? css("--warn") : css("--muted") })));
-      if (fLine) fbars.removePriceLine(fLine);
-      fLine = fbars.createPriceLine({ price: fin.massive_m, color: css("--warn"), lineWidth: 1,
-        lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: "巨量" });
-      fchart.timeScale().fitContent();
-    }
-    $("flegend").textContent = `每根是一週的 MSTR 增發金額，虛線是巨量門檻 ${fmtM(fin.massive_m)}，超過會變色並發警報。`;
+    const btcBars = (DATA.candles && DATA.candles["1d"]) || [];
+    const mnav = DATA.mnav_history || [];
+    // MSTR 日線：優先用 financing 以外，data.json 若無完整歷史，用 mnav 推算的 close 當代理會不準；
+    // monitor 的 mstr.history 沒放進 data.json，所以用 Yahoo 備援已在後端。前端用 mnav 同期的 proxy？
+    // 改讀 DATA.mstr_history 若有；否則用空線。
+    const mstrHist = DATA.mstr_history || [];
 
-    const w = weeks[weeks.length - 1];
-    const lines = [];
-    lines.push(`<li>最新一週 <b>${esc(w.period_start || "")}～${esc(w.period_end)}</b>${w.url ? ` · <a href="${esc(w.url)}" target="_blank" rel="noopener">8-K 原文</a>` : ""}</li>`);
-    lines.push(`<li>BTC：買入 <b>${f0.format(w.btc_purchased)}</b>${w.btc_sold ? `、賣出 <b>${f0.format(w.btc_sold)}</b>` : ""}，持有 <b>${f0.format(w.btc_holdings || 0)}</b></li>`);
-    lines.push(`<li>MSTR 增發 <b>${f0.format(w.mstr_shares)}</b> 股（<b>${fmtM(w.mstr_proceeds_m)}</b>）${fin.pct_rank != null && w.mstr_proceeds_m ? `，過去 ${weeks.length} 週第 ${fin.pct_rank} 百分位` : ""}</li>`);
-    if (w.pref_proceeds_m) lines.push(`<li>優先股發行 <b>${fmtM(w.pref_proceeds_m)}</b></li>`);
-    Object.entries(w.repurchase || {}).forEach(([k, v]) => lines.push(`<li>${esc(k)} 回購 <b>${f0.format(v.shares)}</b> 股（<b>${fmtM(v.price_m)}</b>）</li>`));
-    const convs = fin.converts || [];
-    lines.push(convs.length
-      ? `<li>可轉債：${convs.slice(-3).reverse().map((c) => `${esc(c.filed)} <b>$${(c.principal / 1e9).toFixed(2)}B</b>`).join("、")}</li>`
-      : `<li>過去一年沒有可轉債發行</li>`);
-    $("fin").innerHTML = `<ul class="fin-list">${lines.join("")}</ul>`;
+    if (!fchart) {
+      el.innerHTML = "";
+      fchart = LightweightCharts.createChart(el, {
+        autoSize: true, ...theme(),
+        layout: { ...theme().layout, panes: { separatorColor: css("--line"), separatorHoverColor: css("--muted") } },
+      });
+      fSeries.btc = fchart.addSeries(LightweightCharts.CandlestickSeries, {
+        upColor: css("--up"), downColor: css("--down"), borderVisible: false,
+        wickUpColor: css("--up"), wickDownColor: css("--down"),
+      }, 0);
+      fSeries.mstr = fchart.addSeries(LightweightCharts.LineSeries, {
+        color: css("--btc"), lineWidth: 2, priceLineVisible: false,
+      }, 1);
+      fSeries.bars = fchart.addSeries(LightweightCharts.HistogramSeries, {
+        priceLineVisible: false, lastValueVisible: false,
+        priceFormat: { type: "custom", formatter: (v) => fmtM(v) },
+      }, 2);
+      fSeries.mnav = fchart.addSeries(LightweightCharts.LineSeries, {
+        color: "#3c64aa", lineWidth: 2, priceLineVisible: false,
+      }, 3);
+      fchart.subscribeClick((param) => {
+        if (!param || !param.time) return;
+        const bars = buildEventBars();
+        const hit = bars.find((b) => b.time === param.time);
+        showEventDetail(hit ? hit.items : [], param.time);
+      });
+      // pane stretch
+      try {
+        const panes = fchart.panes();
+        if (panes[0]) panes[0].setStretchFactor(0.35);
+        if (panes[1]) panes[1].setStretchFactor(0.25);
+        if (panes[2]) panes[2].setStretchFactor(0.25);
+        if (panes[3]) panes[3].setStretchFactor(0.15);
+      } catch (e) {}
+    }
+
+    const up = css("--up"), down = css("--down");
+    fSeries.btc.setData(btcBars.map((b) => ({
+      time: typeof b.time === "number" ? b.time : daySec(b.time),
+      open: b.open, high: b.high, low: b.low, close: b.close,
+    })).filter((b) => b.time != null));
+    if (mstrHist.length) {
+      fSeries.mstr.setData(mstrHist.map((p) => ({ time: daySec(p.date), value: p.close })).filter((p) => p.time != null && p.value != null));
+    } else {
+      // 沒有獨立 MSTR 歷史時，先留空，避免誤導
+      fSeries.mstr.setData([]);
+    }
+    const bars = buildEventBars();
+    fSeries.bars.setData(bars.map((b) => ({ time: b.time, value: b.value, color: b.value >= 0 ? b.color : css("--down") })));
+    fSeries.mnav.setData(mnav.map((p) => ({ time: p.time != null ? p.time : daySec(p.date), value: p.value != null ? p.value : p.close })).filter((p) => p.time != null && p.value != null));
+
+    // markers on BTC for event days
+    try {
+      const marks = bars.slice(-80).map((b) => ({
+        time: b.time, position: "aboveBar", color: b.color, shape: "circle", text: "",
+      }));
+      fSeries.btc.setMarkers(marks);
+    } catch (e) {}
+
+    if (evRange === "all") fchart.timeScale().fitContent();
+    else {
+      const last = btcBars.length ? (typeof btcBars[btcBars.length - 1].time === "number"
+        ? btcBars[btcBars.length - 1].time : daySec(String(btcBars[btcBars.length - 1].time))) : null;
+      if (last) {
+        const from = last - (+evRange) * 86400;
+        fchart.timeScale().setVisibleRange({ from, to: last + 86400 });
+      }
+    }
+
+    $("flegend").textContent = `事件 ${ (EVENTS.events || []).length } 筆｜檢視：${evTf === "1w" ? "週" : "日"}｜回購與賣幣為負柱。點柱子看明細（美東／台灣時間）。`;
+
+    // 文字摘要：沿用每週融資最後一週
+    if (weeks.length) {
+      const w = weeks[weeks.length - 1];
+      const lines = [];
+      lines.push(`<li>最新一週 <b>${esc(w.period_start || "")}～${esc(w.period_end)}</b>${w.url ? ` · <a href="${esc(w.url)}" target="_blank" rel="noopener">8-K 原文</a>` : ""}</li>`);
+      lines.push(`<li>BTC：買入 <b>${f0.format(w.btc_purchased)}</b>${w.btc_sold ? `、賣出 <b>${f0.format(w.btc_sold)}</b>` : ""}，持有 <b>${f0.format(w.btc_holdings || 0)}</b></li>`);
+      lines.push(`<li>MSTR 增發 <b>${f0.format(w.mstr_shares)}</b> 股（<b>${fmtM(w.mstr_proceeds_m)}</b>）</li>`);
+      $("fin").innerHTML = `<ul class="fin-list">${lines.join("")}</ul>`;
+    } else {
+      $("fin").innerHTML = "";
+    }
   }
 
   // ---------------------------------------------------------------- ETF 資金流圖
@@ -698,9 +904,9 @@
         echart = LightweightCharts.createChart(el, { autoSize: true, ...theme(),
           leftPriceScale: { visible: true, borderColor: css("--line") },
           timeScale: { borderColor: css("--line"), timeVisible: false } });
-        ebars = echart.addHistogramSeries({ priceScaleId: "left", lastValueVisible: false, priceLineVisible: false,
+        ebars = echart.addSeries(LightweightCharts.HistogramSeries, { priceScaleId: "left", lastValueVisible: false, priceLineVisible: false,
           priceFormat: { type: "custom", formatter: (v) => sgnM(v), minMove: 1 } });
-        eline = echart.addLineSeries({ priceScaleId: "right", lineWidth: 2, priceLineVisible: false });
+        eline = echart.addSeries(LightweightCharts.LineSeries, { priceScaleId: "right", lineWidth: 2, priceLineVisible: false });
         echart.subscribeCrosshairMove((p) => showEtfInfo(p && p.time ? dkey(p.time) : null));
       }
       echart.applyOptions(theme());
@@ -797,7 +1003,7 @@
     if (!DATA) return;
     if (chart) { chart.applyOptions(theme()); applySeriesColors(); renderChart(true); }
     renderMchart();
-    if (fchart) { fchart.remove(); fchart = null; fbars = null; fLine = null; renderFinancing(); }
+    if (fchart) { fchart.remove(); fchart = null; fSeries = {}; fLine = null; renderFinancing(); }
     if (echart) { echart.remove(); echart = null; ebars = null; eline = null; renderEtf(); }
   });
   window.addEventListener("resize", () => { if (DATA) renderRuler(); });
@@ -857,7 +1063,7 @@
     ws.onerror = () => { try { ws.close(); } catch (_) {} };
   }
 
-  load().then(() => { connectLive(); connectMstr(); });
+  load().then(() => { connectLive(); connectMstr(); loadEvents(false); setInterval(() => loadEvents(true), 60000); });
 })();
 </script>
 </body>

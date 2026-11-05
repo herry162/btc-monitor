@@ -1,0 +1,19 @@
+name = "btc-monitor-sec"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# 每 1 分鐘檢查一次 EDGAR（免費方案 Cron 可用）
+[triggers]
+crons = ["* * * * *"]
+
+# 部署前用 wrangler kv namespace create btc-monitor-events 取得 id，貼到這裡
+[[kv_namespaces]]
+binding = "EVENTS_KV"
+id = "1e447c715e39495c9e931b8f36da5b17"
+preview_id = "1e447c715e39495c9e931b8f36da5b17"
+
+[vars]
+# 非秘密設定（秘密用 wrangler secret put）
+GITHUB_REPO = "herry162/btc-monitor"
+GITHUB_WORKFLOW = "sec-fast.yml"
+SEC_UA_FALLBACK = "btc-monitor"

@@ -38,6 +38,8 @@ DATA_PATH = os.path.join(ROOT, "docs", "data.json")
 STRATEGY_STORE = os.path.join(ROOT, "data", "strategy.json")
 BTCD_STORE = os.path.join(ROOT, "data", "btcd.json")
 ETF_STORE = os.path.join(ROOT, "data", "etf.json")
+EVENTS_STORE = os.path.join(ROOT, "data", "events.json")
+EVENTS_DOCS = os.path.join(ROOT, "docs", "events.json")
 
 UTC = dt.timezone.utc
 TPE = dt.timezone(dt.timedelta(hours=8))
@@ -845,68 +847,129 @@ def check_divergence(alerter, w1_closed, mnav_hist, cfg):
 
 # ---------------------------------------------------------------- Strategy 申報警報
 
+def _fmt_et_tpe(acceptance, filed):
+    """美東時間＋台灣時間字串。"""
+    et_iso = sec.acceptance_to_et_iso(acceptance) if acceptance else None
+    if et_iso:
+        try:
+            when = dt.datetime.fromisoformat(et_iso)
+            tpe = when.astimezone(TPE)
+            return (f"{when.month}/{when.day} {when.hour:02d}:{when.minute:02d}",
+                    f"{tpe.month}/{tpe.day} {tpe.hour:02d}:{tpe.minute:02d}")
+        except Exception:
+            pass
+    if filed:
+        return (filed[5:].replace("-", "/"), filed[5:].replace("-", "/"))
+    return ("?", "?")
+
+
+def _money_short(usd):
+    if usd is None:
+        return None
+    if abs(usd) >= 1e9:
+        return f"${usd/1e9:.2f}B".replace("$0.", "$0.")
+    return f"${usd/1e6:,.1f}M"
+
+
 def strategy_alerts(alerter, new_filings, weeks, cfg, metrics, today):
     iss = cfg.get("issuance", {})
     massive_mstr = float(iss.get("massive_mstr_weekly_usd_m", 1000))
     massive_conv = float(iss.get("massive_convert_usd_m", 1000))
-    # 過去 26 週內有沒有巨量發普通股（簡報 p.166 的「每次發每次賣」從巨量之後開始）
+    alert_convert = bool(iss.get("alert_convert_announced", True))
+    alert_sell = bool(iss.get("alert_btc_sell", True))
     cut = (today - dt.timedelta(weeks=26)).isoformat()
     recent_massive = any(w["mstr_proceeds_m"] >= massive_mstr and w["period_end"] >= cut for w in weeks)
-    for f in sorted(new_filings, key=lambda x: x["filed"]):
-        if (today - dt.date.fromisoformat(f["filed"])).days > 3:
+
+    for f in sorted(new_filings, key=lambda x: x.get("filed") or ""):
+        filed = f.get("filed") or ""
+        try:
+            age = (today - dt.date.fromisoformat(filed)).days if filed else 999
+        except ValueError:
+            age = 999
+        if age > 3:
             continue  # 補抓的舊申報不發通知
-        key_base = f.get("url", f["filed"])
-        if f.get("is_update") and f.get("period_end"):
-            atm, rep, btc = f.get("atm", {}), f.get("repurchase", {}), f.get("btc", {})
-            lines = [f"Strategy 週報（{f.get('period_start', '')[5:]}～{f['period_end'][5:]}）"]
-            if btc:
-                act = f"買入 {btc.get('purchased', 0):,.0f}" if btc.get("purchased") else "無買入"
-                if btc.get("sold"):
-                    act += f"、賣出 {btc['sold']:,.0f}"
-                lines.append(f"BTC：{act}，持有 {btc.get('holdings', 0):,.0f}")
-            ms = atm.get("MSTR", {})
-            if ms.get("shares"):
-                lines.append(f"MSTR 增發 {ms['shares']:,.0f} 股（${ms.get('proceeds_m', 0):,.1f}M）")
-            for s in sec.SERIES:
-                a = atm.get(s, {})
-                if a.get("proceeds_m"):
-                    lines.append(f"{s} 發行 ${a['proceeds_m']:,.1f}M")
-                r = rep.get(s, {})
-                if r.get("shares"):
-                    lines.append(f"{s} 回購 {r['shares']:,.0f} 股（${r.get('price_m', 0):,.1f}M）")
-            if rep.get("MSTR", {}).get("shares"):
-                lines.append(f"MSTR 回購 {rep['MSTR']['shares']:,.0f} 股（${rep['MSTR'].get('price_m', 0):,.1f}M）")
-            if "usd_reserve" in f:
-                lines.append(f"USD Reserve ${f['usd_reserve'] / 1e9:.2f}B、USD Cash ${f.get('usd_cash', 0) / 1e6:,.0f}M")
-            hm, _, _, basis = headline(metrics)
-            if hm is not None:
-                lines.append(f"mNAV {hm:.2f}（{basis}，已用新數據重算）")
-            if ms.get("shares") and ms.get("proceeds_m", 0) < massive_mstr:
-                lines.append("簡報解讀：發普通股代表 Strategy 認為 mNAV 偏高（p.149–151）；未達巨量門檻")
-                if recent_massive:
-                    lines.append("巨量發行後的每一次增發：簡報規則是分批賣出剩下的一半（p.166）")
-            alerter.push(f"8k:{key_base}", "\n".join(lines))
+        key_base = f.get("url") or filed
+        et, tpe = _fmt_et_tpe(f.get("acceptance"), filed)
+        period = ""
+        if f.get("period_start") and f.get("period_end"):
+            ps, pe = f["period_start"], f["period_end"]
+            period = f"｜期間 {ps[5:].replace('-', '/') }–{pe[5:].replace('-', '/')}"
+
+        parts = []
+        atm, rep, btc = f.get("atm") or {}, f.get("repurchase") or {}, f.get("btc") or {}
+        ms = atm.get("MSTR") or {}
+        if ms.get("shares"):
+            parts.append(f"MSTR ATM {ms['shares']:,.0f} 股，淨額 {_money_short(ms.get('proceeds_m', 0)*1e6)}")
+        for s in sec.SERIES:
+            a = atm.get(s) or {}
+            if a.get("shares") or a.get("proceeds_m"):
+                parts.append(f"{s} ATM {a.get('shares', 0):,.0f} 股，淨額 {_money_short(a.get('proceeds_m', 0)*1e6)}")
+        for s, row in (rep or {}).items():
+            if row.get("shares"):
+                parts.append(f"回購 {s} {row['shares']:,.0f} 股，{_money_short(row.get('price_m', 0)*1e6)}")
+        uses = []
+        if "usd_reserve" in f:
+            uses.append(f"美元儲備 {_money_short(f['usd_reserve'])}")
+            if f.get("usd_cash"):
+                uses.append(f"USD Cash {_money_short(f['usd_cash'])}")
+        if uses:
+            parts.append("用途：" + "、".join(uses))
+        if btc.get("purchased"):
+            parts.append(f"買入 {btc['purchased']:,.0f} BTC")
+        if btc.get("sold"):
+            parts.append(f"賣出 {btc['sold']:,.0f} BTC")
+        if btc.get("holdings"):
+            parts.append(f"持倉 {btc['holdings']:,.0f} BTC")
+
+        if f.get("is_update") and parts:
+            form = f.get("form") or "8-K"
+            msg = (f"Strategy {form}｜美東 {et}（台灣 {tpe}）{period}｜"
+                   + "｜".join(parts))
+            if f.get("url"):
+                msg += f"｜{f['url']}"
+            alerter.push(f"8k:{key_base}", msg)
             if ms.get("proceeds_m", 0) >= massive_mstr:
                 alerter.push(f"massive:{key_base}", (
-                    f"⚠️ 巨量發普通股：本週 MSTR 增發 ${ms['proceeds_m']:,.0f}M（門檻 ${massive_mstr:,.0f}M）\n"
-                    "簡報解讀：mNAV 頂部訊號，MSTR 分批出場"))
-        for c in f.get("converts", []):
-            if c.get("kind") not in ("pricing", "closing"):
+                    f"⚠️ 巨量發普通股：本週 MSTR 增發 ${ms['proceeds_m']:,.0f}M"
+                    f"（門檻 ${massive_mstr:,.0f}M）\n簡報解讀：mNAV 頂部訊號"))
+            if alert_sell and btc.get("sold"):
+                alerter.push(f"btcsell:{key_base}", (
+                    f"⚠️ Strategy 賣出 BTC {btc['sold']:,.0f}\n原文：{f.get('url', '')}"))
+
+        for c in f.get("converts") or []:
+            if c.get("kind") not in ("pricing", "closing", "proposed"):
+                continue
+            if not alert_convert and c.get("kind") == "proposed":
                 continue
             big = c["principal"] / 1e6 >= massive_conv
-            note = ("簡報解讀：巨量發可轉債＝mNAV 最頂，MSTR 出場一半（p.147、p.166）" if big
-                    else "簡報解讀：發可轉債代表債市看好 MSTR、mNAV 將上升；不加 BTC 改加 MSTR，小倉買 MSTU（p.134–140）")
-            alerter.push(f"conv:{key_base}", (
-                f"{'⚠️ 巨量' if big else ''}Strategy 可轉債{'定價' if c['kind'] == 'pricing' else '完成發行'}："
-                f"${c['principal'] / 1e9:.2f}B {c.get('notes', '')}\n{note}\n"
-                "負債數字要等下一份季報才會自動更新，急的話在 config.json 填 debt_override"))
+            stage = {"proposed": "宣布發行", "pricing": "定價", "closing": "交割"}.get(c["kind"], c["kind"])
+            note = ("簡報解讀：巨量發可轉債＝mNAV 最頂" if big
+                    else "簡報解讀：發可轉債代表債市看好 MSTR")
+            alerter.push(f"conv:{key_base}:{c['kind']}", (
+                f"{'⚠️ 巨量' if big else ''}Strategy 可轉債{stage}："
+                f"{_money_short(c['principal'])} {c.get('notes', '')}\n{note}\n"
+                f"美東 {et}（台灣 {tpe}）｜{f.get('url', '')}"))
+
+        for c in f.get("convert_repurchases") or []:
+            alerter.push(f"convrep:{key_base}", (
+                f"Strategy 可轉債回購｜美東 {et}（台灣 {tpe}）｜"
+                f"面額 {_money_short(c.get('principal'))}、現金約 {_money_short(c.get('cash'))}"
+                f"（{c.get('notes_year', '')} Notes）｜{f.get('url', '')}"))
+
         if f.get("looks_like_update") and f.get("warnings"):
             alerter.push(f"warn:{key_base}", (
-                "Strategy 8-K 自動解析有問題：" + "；".join(f["warnings"]) +
-                f"\n這週的數字可能沒算進去，請打開原文確認：{f.get('url', '')}"))
+                "Strategy 8-K 自動解析有問題（需人工確認）：" + "；".join(f["warnings"]) +
+                f"\n原文：{f.get('url', '')}"))
+        # 可選 Grok：表格空且看起來像更新
+        if (f.get("looks_like_update") and not f.get("atm") and not f.get("btc")
+                and os.environ.get("GROK_API_KEY")):
+            try:
+                import grok_extract
+                # 沒有原始 HTML 時略過；完整流程在 sec-fast／回填裡可接
+                pass
+            except Exception:
+                pass
 
-
-# ---------------------------------------------------------------- 排行訊號
 
 def _money_m(v, signed=True):
     sign = ("+" if v > 0 else ("−" if v < 0 else "")) if signed else ""
@@ -1363,6 +1426,10 @@ def run(args):
                 "source": mstr["source"], "kind": mstr.get("kind", "official"), "stale": mstr_stale,
                 "official": mstr.get("official"), "perp": mstr.get("perp"),
                 "perps": mstr.get("perps", []), "premium_pct": mstr.get("premium_pct")},
+            "mstr_history": [] if not mstr else [
+                {"date": h["date"], "close": h["close"]} for h in mstr.get("history", [])
+                if h.get("date") and h.get("close") is not None
+            ],
             "strategy": None if not snap else {
                 "mode": snap_mode, "as_of": snap["as_of"], "age_days": snap_age,
                 "stale": snap_age is not None and snap_age >= (14 if snap_mode == "auto" else stale_days),
@@ -1379,7 +1446,35 @@ def run(args):
             "signals": build_signals(metrics, lv, vol_d, vol_w, windows, levels, fin, div, brk, etf, btcd),
             "alerts": state.get("log", [])[:15],
             "errors": errors,
+            "events_worker_url": (cfg.get("events_worker_url") or "").rstrip("/") or None,
         }
+        # ---- 事件列表（給多窗格圖／Worker）
+        try:
+            if args.demo:
+                raise RuntimeError("demo skip events")
+            events = sec.store_to_events(store)
+            payload = {"generated_at": int(now), "count": len(events), "events": events,
+                       "worker_url": (cfg.get("events_worker_url") or "").rstrip("/") or None}
+            save_json(EVENTS_STORE, payload)
+            save_json(EVENTS_DOCS, payload)
+            # 可選：推到 Cloudflare KV
+            acct = os.environ.get("CF_ACCOUNT_ID", "").strip()
+            token = os.environ.get("CF_API_TOKEN", "").strip()
+            ns = os.environ.get("CF_KV_NAMESPACE_ID", "").strip()
+            if acct and token and ns:
+                body = json.dumps(payload, ensure_ascii=False).encode()
+                url = (f"https://api.cloudflare.com/client/v4/accounts/{acct}"
+                       f"/storage/kv/namespaces/{ns}/values/events")
+                req = urllib.request.Request(url, data=body, method="PUT", headers={
+                    "Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+                try:
+                    urllib.request.urlopen(req, timeout=30).read()
+                except Exception as e:
+                    errors.append(f"KV 推送：{e}")
+        except Exception as e:
+            if "demo skip" not in str(e):
+                errors.append(f"events.json：{e}")
+
         save_json(DATA_PATH, data, compact=True)
         print(f"完成：BTC {usd(price)}，mNAV {headline(metrics)[0]}（{headline(metrics)[3]}，{snap_mode}），"
               f"新 8-K {len(new_filings)} 份，錯誤 {len(errors)} 筆")

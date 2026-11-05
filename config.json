@@ -1,27 +1,44 @@
 {
   "_說明": "改完存檔、推上 GitHub，下一次排程就會套用。金額單位都是美元。",
   "levels": [
-    { "price": 88000, "name": "突破確認" },
-    { "price": 74900, "name": "激進止損" },
-    { "price": 63000, "name": "保守止損" }
+    {
+      "price": 88000,
+      "name": "突破確認"
+    },
+    {
+      "price": 74900,
+      "name": "激進止損"
+    },
+    {
+      "price": 63000,
+      "name": "保守止損"
+    }
   ],
   "approach_pct": 1.0,
   "approach_cooldown_hours": 12,
-  "mnav_alert_thresholds": [1.0, 1.22],
+  "mnav_alert_thresholds": [
+    1.0,
+    1.22
+  ],
   "daily_summary_hour_taipei": 8,
   "snapshot_stale_days": 8,
   "quarter_windows": {
     "rollover_days_before_expiry": 14,
-    "followup_days_of_month": [10, 20]
+    "followup_days_of_month": [
+      10,
+      20
+    ]
   },
-
   "strategy_auto": {
     "enabled": true,
     "sec_user_agent": "",
     "_sec_user_agent": "留空就好。SEC 要求名字和真實 email，放在 GitHub Secret 的 SEC_USER_AGENT 比較不會公開",
     "fallback_anchor": {
       "_說明": "季報解析失敗時才用。之後每週 8-K 的增發、回購會自動加減上去。",
-      "shares": { "as_of": "2026-07-24", "value": 384225751 },
+      "shares": {
+        "as_of": "2026-07-24",
+        "value": 384225751
+      },
       "preferred": {
         "as_of": "2026-08-23",
         "STRF": 1284000000,
@@ -30,11 +47,13 @@
         "STRK": 1402000000,
         "STRD": 1402000000
       },
-      "debt": { "as_of": "2026-08-23", "value": 6714000000 }
+      "debt": {
+        "as_of": "2026-08-23",
+        "value": 6714000000
+      }
     },
     "debt_override": null
   },
-
   "official_framework": {
     "as_of": "2026-10-04",
     "fdso": 431400000,
@@ -42,14 +61,19 @@
     "otm_preferred_usd": 13950000000,
     "_說明": "Strategy 2026-10-04 投資人簡報的官方 mNAV 公式：(BTC 市值 + USD 資產 − 價外可轉債 − 價外優先股) ÷ 完全稀釋股數。之後每週 8-K 的增發與回購會自動加減；Strategy 公布新的數字時更新這裡。刪掉這段就改回簡報簡化算法。"
   },
-
   "issuance": {
     "massive_mstr_weekly_usd_m": 1000,
     "massive_convert_usd_m": 1000,
-    "lookback_weeks": 52
+    "lookback_weeks": 52,
+    "alert_convert_announced": true,
+    "alert_btc_sell": true,
+    "_說明_alerts": "巨量普通股／可轉債門檻單位是百萬美元；alert_btc_sell=true 時任何賣幣都推播"
   },
   "breakout": {
-    "lookback": { "1d": 20, "1w": 12 },
+    "lookback": {
+      "1d": 20,
+      "1w": 12
+    },
     "volume_ratio": 1.5,
     "body_ratio": 0.5
   },
@@ -60,24 +84,36 @@
     "crash_mnav_pct": 20,
     "crash_btc_pct": 5
   },
-  "etf": { "alert_daily_usd_m": 500 },
+  "etf": {
+    "alert_daily_usd_m": 500
+  },
   "mstr_24h": {
     "enabled": true,
     "official_fresh_minutes": 20,
-    "venues": ["binance", "hyperliquid"],
+    "venues": [
+      "binance",
+      "hyperliquid"
+    ],
     "_說明": "美股開盤（含盤前盤後）用 Nasdaq 官方成交價；休市時改用這些永續合約裡 24 小時成交量最大的一家"
   },
   "eur_usd": 1.16,
-
   "strategy_snapshots": [
     {
       "as_of": "2026-10-18",
       "btc_holdings": 848517,
       "shares_outstanding": 384225751,
       "debt_usd": 6714000000,
-      "preferred_usd": { "STRF": 1284000000, "STRC": 8612000000, "STRE": 905000000, "STRK": 1402000000, "STRD": 1402000000 },
+      "preferred_usd": {
+        "STRF": 1284000000,
+        "STRC": 8612000000,
+        "STRE": 905000000,
+        "STRK": 1402000000,
+        "STRD": 1402000000
+      },
       "cash_usd": 5277300000,
       "_說明": "自動解析完全失敗時才會用這筆"
     }
-  ]
+  ],
+  "events_worker_url": "https://btc-monitor-sec.herry162.workers.dev",
+  "_events_worker_url": "填 Cloudflare Worker 的網址，例如 https://btc-monitor-sec.xxx.workers.dev ；前端每 60 秒輪詢 /events.json"
 }
