@@ -7377,6 +7377,75 @@
       "warnings": [],
       "is_update": false,
       "looks_like_update": false
+    },
+    "0001193125-26-452693": {
+      "filed": "2026-11-09",
+      "form": "8-K",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526452693/mstr-20261109.htm",
+      "acceptance": "2026-11-09T13:00:15.000Z",
+      "v": 4,
+      "atm": {
+        "STRF": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRC": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRK": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "notional_m": 0.0,
+          "proceeds_m": 0.0
+        },
+        "MSTR": {
+          "shares": 2051348.0,
+          "notional_m": 0.0,
+          "proceeds_m": 283.8
+        }
+      },
+      "repurchase": {
+        "STRF": {
+          "shares": 0.0,
+          "price_m": 0.0
+        },
+        "STRC": {
+          "shares": 1887464.0,
+          "price_m": 188.3
+        },
+        "STRK": {
+          "shares": 0.0,
+          "price_m": 0.0
+        },
+        "STRD": {
+          "shares": 0.0,
+          "price_m": 0.0
+        },
+        "MSTR": {
+          "shares": 0.0,
+          "price_m": 0.0
+        }
+      },
+      "btc": {
+        "holdings": 850364.0,
+        "purchased": 1036.0,
+        "sold": 0.0
+      },
+      "converts": [],
+      "warnings": [],
+      "period_start": "2026-11-02",
+      "period_end": "2026-11-08",
+      "usd_reserve": 4770000000.0,
+      "usd_cash": 146200000.0,
+      "is_update": true,
+      "looks_like_update": true
     }
   },
   "reports": {
@@ -7526,7 +7595,7 @@
       }
     }
   },
-  "checked_at": 1794228329,
+  "checked_at": 1794229250,
   "backlog_8k": 0,
   "reparse_left": 0
 }
