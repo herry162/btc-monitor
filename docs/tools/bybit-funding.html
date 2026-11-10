@@ -1,0 +1,947 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Bybit 幣本位 BTCUSD 資金費率回測</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>₿</text></svg>">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f2f5f7;
+    --panel: #ffffff;
+    --line: #dce3e9;
+    --grid: rgba(18, 32, 43, 0.07);
+    --text: #12202b;
+    --muted: #5a6a77;
+    --btc: #b86200;
+    --up: #12804f;
+    --down: #c2382f;
+    --warn: #8a6a00;
+    --warn-bg: rgba(138, 106, 0, 0.10);
+    --err-bg: rgba(194, 56, 47, 0.10);
+    --btn: #12202b;
+    --btn-text: #ffffff;
+    --btn-secondary: #ffffff;
+    --accent: #1a6fbf;
+    --num: "Barlow Semi Condensed", "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    --cjk: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Heiti TC", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #0d1620;
+      --panel: #142230;
+      --line: #22313f;
+      --grid: rgba(227, 234, 240, 0.06);
+      --text: #e3eaf0;
+      --muted: #8394a2;
+      --btc: #f7931a;
+      --up: #2db57b;
+      --down: #e5544b;
+      --warn: #d9b44a;
+      --warn-bg: rgba(217, 180, 74, 0.12);
+      --err-bg: rgba(229, 84, 75, 0.14);
+      --btn: #e3eaf0;
+      --btn-text: #12202b;
+      --btn-secondary: #1a2b3a;
+      --accent: #6ea8e8;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--cjk);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    padding: env(safe-area-inset-top, 0) 16px env(safe-area-inset-bottom, 16px);
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 20px 0 56px; }
+  h1 { font-size: 1.35rem; line-height: 1.35; margin: 0 0 8px; }
+  .lead, .note, .muted { color: var(--muted); }
+  .lead { margin: 0 0 16px; }
+  a { color: var(--accent); }
+  .num { font-family: var(--num); font-variant-numeric: tabular-nums; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
+    margin: 0 0 14px;
+  }
+  .row-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0 0;
+  }
+  button {
+    appearance: none;
+    border: 1px solid transparent;
+    background: var(--btn);
+    color: var(--btn-text);
+    font: inherit;
+    font-weight: 600;
+    padding: 10px 14px;
+    border-radius: 10px;
+    min-height: 44px;
+    cursor: pointer;
+  }
+  button.secondary {
+    background: var(--btn-secondary);
+    color: var(--text);
+    border-color: var(--line);
+  }
+  button:disabled { opacity: 0.55; cursor: default; }
+  .progress-track {
+    height: 8px;
+    background: var(--line);
+    border-radius: 99px;
+    overflow: hidden;
+    margin: 10px 0 6px;
+  }
+  .progress-bar {
+    height: 100%;
+    width: 0;
+    background: var(--btc);
+    transition: width 0.2s ease;
+  }
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  @media (min-width: 640px) {
+    .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  .kpi {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+  }
+  .kpi .label { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+  .kpi .value { font-size: 1.25rem; font-weight: 700; letter-spacing: 0.01em; }
+  .pos { color: var(--up); }
+  .neg { color: var(--down); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: right;
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 600; }
+  .chart-wrap { position: relative; width: 100%; height: 240px; margin-top: 8px; }
+  canvas { width: 100%; height: 100%; display: block; }
+  h2 { font-size: 1.05rem; margin: 0 0 8px; }
+  .error {
+    background: var(--err-bg);
+    border: 1px solid var(--down);
+    border-radius: 12px;
+    padding: 14px;
+    margin: 0 0 14px;
+  }
+  .error pre, .raw {
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 13px;
+    background: rgba(0,0,0,0.06);
+    padding: 10px;
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+  .urls { padding-left: 18px; margin: 8px 0; }
+  .urls li { margin: 6px 0; word-break: break-all; }
+  .hidden { display: none !important; }
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    background: var(--btn);
+    color: var(--btn-text);
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 14px;
+    z-index: 20;
+  }
+  footer { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .back { font-size: 14px; margin-bottom: 12px; display: inline-block; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="../">← 回到監控首頁</a>
+  <h1>Bybit 幣本位 BTCUSD 資金費率回測</h1>
+  <p class="lead">在你自己的瀏覽器向 Bybit 公開 API 抓取完整歷史（約 2018-11-15 起，約 8,800 筆）。資料不會經過我們的伺服器。請保持此頁開啟直到算完。</p>
+
+  <div class="panel">
+    <div id="status">準備開始…</div>
+    <div class="progress-track" id="progressTrack"><div class="progress-bar" id="progressBar"></div></div>
+    <div class="muted num" id="progressText"></div>
+    <div class="row-btns">
+      <button type="button" id="btnRun">重新計算</button>
+      <button type="button" id="btnCsv" class="secondary" disabled>下載 CSV</button>
+      <button type="button" id="btnCopy" class="secondary" disabled>複製結果</button>
+    </div>
+  </div>
+
+  <div id="errorBox" class="error hidden"></div>
+
+  <section id="meta" class="panel hidden"></section>
+  <section id="kpis" class="hidden"></section>
+  <section id="posBox" class="panel hidden"></section>
+  <section id="yearBox" class="panel hidden"></section>
+  <section id="chartBox1" class="panel hidden">
+    <h2>累計資金費率</h2>
+    <div class="chart-wrap"><canvas id="cumChart"></canvas></div>
+  </section>
+  <section id="chartBox2" class="panel hidden">
+    <h2>各年年化資金費率</h2>
+    <div class="chart-wrap"><canvas id="yearChart"></canvas></div>
+  </section>
+  <footer>
+    年化公式：期間內各次資金費率加總 ÷ 期間天數 × 365。正費率時多頭支付、空頭收取。幣本位合約資金費以 BTC 結算，2 萬美元數字為等值估算。此為歷史回測，不構成投資建議。時間預設以台北時間（UTC+8）顯示，各年統計採用 UTC 曆年。
+  </footer>
+</main>
+<script>
+/* === FUNDING_STATS_START === */
+function elapsedDaysOf(startTs, endTs, intervalMin) {
+  const raw = (Number(endTs) - Number(startTs)) / 86400000;
+  if (raw > 0) return raw;
+  if (intervalMin) return Number(intervalMin) / (60 * 24);
+  return null;
+}
+
+function sumRates(rows) {
+  let s = 0;
+  for (let i = 0; i < rows.length; i++) s += rows[i].rate;
+  return s;
+}
+
+function windowStats(rows, startTs, endTs, intervalMin) {
+  const subset = [];
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (r.ts >= startTs && r.ts <= endTs) subset.push(r);
+  }
+  const sum = sumRates(subset);
+  if (!subset.length) {
+    return { count: 0, sum: 0, elapsedDays: 0, annualized: null, firstTs: null, lastTs: null };
+  }
+  const firstTs = subset[0].ts;
+  const lastTs = subset[subset.length - 1].ts;
+  const elapsedDays = elapsedDaysOf(Math.max(startTs, firstTs), lastTs, intervalMin);
+  const annualized = elapsedDays ? sum / elapsedDays * 365 : null;
+  return { count: subset.length, sum, elapsedDays, annualized, firstTs, lastTs };
+}
+
+function computeFundingStats(rows, options) {
+  options = options || {};
+  const now = options.now != null ? options.now : Date.now();
+  const positionUsd = options.positionUsd != null ? options.positionUsd : 20000;
+  const intervalMin = options.intervalMin != null ? options.intervalMin : 480;
+  const sorted = rows.slice().sort(function (a, b) { return a.ts - b.ts; });
+  const count = sorted.length;
+  if (!count) {
+    return {
+      count: 0, firstTs: null, lastTs: null, sum: 0, elapsedDays: 0,
+      annualized: null, mean: null, posCount: 0, zeroCount: 0, negCount: 0,
+      pctPositive: null, pctZero: null, pctNegative: null,
+      max: null, min: null, years: [], yearsSum: 0, positionUsd: positionUsd,
+      fullYearlyUsd: null, last30: null, last90: null, last365: null
+    };
+  }
+  const firstTs = sorted[0].ts;
+  const lastTs = sorted[count - 1].ts;
+  const sum = sumRates(sorted);
+  const elapsedDays = elapsedDaysOf(firstTs, lastTs, intervalMin);
+  const annualized = elapsedDays ? sum / elapsedDays * 365 : null;
+  const mean = sum / count;
+  let posCount = 0, zeroCount = 0, negCount = 0;
+  let max = sorted[0], min = sorted[0];
+  for (let i = 0; i < count; i++) {
+    const r = sorted[i];
+    if (r.rate > 0) posCount += 1;
+    else if (r.rate < 0) negCount += 1;
+    else zeroCount += 1;
+    if (r.rate > max.rate) max = r;
+    if (r.rate < min.rate) min = r;
+  }
+  const yearsMap = new Map();
+  for (let i = 0; i < count; i++) {
+    const r = sorted[i];
+    const year = new Date(r.ts).getUTCFullYear();
+    if (!yearsMap.has(year)) yearsMap.set(year, []);
+    yearsMap.get(year).push(r);
+  }
+  const years = [];
+  let yearsSum = 0;
+  const yearKeys = Array.from(yearsMap.keys()).sort(function (a, b) { return a - b; });
+  for (let i = 0; i < yearKeys.length; i++) {
+    const year = yearKeys[i];
+    const list = yearsMap.get(year);
+    const ySum = sumRates(list);
+    yearsSum += ySum;
+    const yElapsed = elapsedDaysOf(list[0].ts, list[list.length - 1].ts, intervalMin);
+    years.push({
+      year: year,
+      count: list.length,
+      sum: ySum,
+      elapsedDays: yElapsed,
+      annualized: yElapsed ? ySum / yElapsed * 365 : null
+    });
+  }
+  function lastN(days) {
+    const start = now - days * 86400000;
+    const st = windowStats(sorted, start, now, intervalMin);
+    return Object.assign({}, st, {
+      yearlyUsd: st.annualized == null ? null : positionUsd * st.annualized,
+      days: days
+    });
+  }
+  return {
+    count: count,
+    firstTs: firstTs,
+    lastTs: lastTs,
+    sum: sum,
+    elapsedDays: elapsedDays,
+    annualized: annualized,
+    mean: mean,
+    posCount: posCount,
+    zeroCount: zeroCount,
+    negCount: negCount,
+    pctPositive: posCount / count,
+    pctZero: zeroCount / count,
+    pctNegative: negCount / count,
+    max: { ts: max.ts, rate: max.rate },
+    min: { ts: min.ts, rate: min.rate },
+    years: years,
+    yearsSum: yearsSum,
+    positionUsd: positionUsd,
+    fullYearlyUsd: annualized == null ? null : positionUsd * annualized,
+    last30: lastN(30),
+    last90: lastN(90),
+    last365: lastN(365)
+  };
+}
+/* === FUNDING_STATS_END === */
+
+const API_BASE = "https://api.bybit.com";
+const FUNDING_PATH = "/v5/market/funding/history";
+const INFO_PATH = "/v5/market/instruments-info";
+const SYMBOL = "BTCUSD";
+const CATEGORY = "inverse";
+const PAGE_SIZE = 200;
+const EXPECTED_START = Date.UTC(2018, 10, 15);
+const POSITION_USD = 20000;
+const PAGE_DELAY_MS = 280;
+const MAX_PAGES = 80;
+
+let lastRows = [];
+let lastStats = null;
+let lastMeta = null;
+let lastUrls = [];
+let running = false;
+
+function $(id) { return document.getElementById(id); }
+function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+function formatTaipei(ts, withSeconds) {
+  if (ts == null) return "—";
+  const opt = {
+    timeZone: "Asia/Taipei",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23"
+  };
+  if (withSeconds) opt.second = "2-digit";
+  const parts = new Intl.DateTimeFormat("en-CA", opt).formatToParts(new Date(ts));
+  const get = function (t) {
+    for (let i = 0; i < parts.length; i++) if (parts[i].type === t) return parts[i].value;
+    return "";
+  };
+  const date = get("year") + "-" + get("month") + "-" + get("day");
+  const time = get("hour") + ":" + get("minute") + (withSeconds ? ":" + get("second") : "");
+  return date + " " + time;
+}
+
+function formatUTC(ts) {
+  if (ts == null) return "—";
+  return new Date(ts).toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
+function pct(x, digits) {
+  if (x == null || !isFinite(x)) return "—";
+  return (x * 100).toFixed(digits == null ? 2 : digits) + "%";
+}
+
+function money(x) {
+  if (x == null || !isFinite(x)) return "—";
+  const sign = x < 0 ? "-" : "";
+  return sign + "$" + Math.abs(x).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function signedPct(x, digits) {
+  if (x == null || !isFinite(x)) return "—";
+  const n = (x * 100).toFixed(digits == null ? 2 : digits);
+  return (x > 0 ? "+" : "") + n + "%";
+}
+
+function clsSign(x) {
+  if (x == null || !isFinite(x) || x === 0) return "num";
+  return "num " + (x > 0 ? "pos" : "neg");
+}
+
+function toast(msg) {
+  const old = document.querySelector(".toast");
+  if (old) old.remove();
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(function () { el.remove(); }, 2200);
+}
+
+async function fetchJsonWithRetry(url, tries) {
+  tries = tries || 5;
+  let lastErr = null;
+  for (let i = 0; i < tries; i++) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (res.status === 429) {
+        await sleep(1000 * Math.pow(2, i));
+        lastErr = new Error("HTTP 429 Too Many Requests");
+        continue;
+      }
+      const text = await res.text();
+      if (!res.ok) {
+        const err = new Error("HTTP " + res.status + " " + res.statusText + (text ? " — " + text.slice(0, 400) : ""));
+        err.status = res.status;
+        err.body = text;
+        if (res.status === 403 || res.status === 401 || res.status === 404) throw err;
+        lastErr = err;
+        if (i < tries - 1 && res.status >= 500) {
+          await sleep(800 * Math.pow(2, i));
+          continue;
+        }
+        throw err;
+      }
+      return JSON.parse(text);
+    } catch (e) {
+      lastErr = e;
+      if (e && (e.status === 403 || e.status === 401 || e.status === 404)) throw e;
+      if (i < tries - 1) await sleep(800 * Math.pow(2, i));
+    }
+  }
+  throw lastErr || new Error("請求失敗");
+}
+
+function firstFundingUrl(endTime) {
+  const u = new URL(API_BASE + FUNDING_PATH);
+  u.searchParams.set("category", CATEGORY);
+  u.searchParams.set("symbol", SYMBOL);
+  u.searchParams.set("limit", String(PAGE_SIZE));
+  if (endTime != null) u.searchParams.set("endTime", String(endTime));
+  return u.toString();
+}
+
+function infoUrl() {
+  const u = new URL(API_BASE + INFO_PATH);
+  u.searchParams.set("category", CATEGORY);
+  u.searchParams.set("symbol", SYMBOL);
+  return u.toString();
+}
+
+function setProgress(donePages, rows, expectedRows) {
+  const pctDone = expectedRows ? Math.min(100, rows / expectedRows * 100) : Math.min(100, donePages / 44 * 100);
+  $("progressBar").style.width = pctDone.toFixed(1) + "%";
+  $("progressText").textContent = "第 " + donePages + " 頁，已抓 " + rows.toLocaleString("en-US") +
+    " 筆" + (expectedRows ? "／約 " + expectedRows.toLocaleString("en-US") + " 筆" : "");
+}
+
+function showError(err, urls, partialCount) {
+  const box = $("errorBox");
+  box.classList.remove("hidden");
+  const raw = (err && (err.stack || err.message) ? String(err.message || err) : String(err));
+  const name = err && err.name ? err.name : "Error";
+  const links = (urls && urls.length ? urls : [infoUrl(), firstFundingUrl()]).slice(0, 8);
+  let html = "<h2>無法從這個瀏覽器連上 Bybit API</h2>";
+  html += "<p>可能原因：網路限制、跨域（CORS）、或暫時性錯誤。此頁是在你的裝置上直接向 <code>api.bybit.com</code> 抓資料，沒有經過我們的伺服器。</p>";
+  if (partialCount) {
+    html += "<p>已先抓到 " + partialCount + " 筆不完整資料，僅供參考。</p>";
+  }
+  html += "<p>原始錯誤（" + name + "）：</p><pre class=\"raw\"></pre>";
+  html += "<p>請依序試試：</p><ol>";
+  html += "<li>確認使用台灣網路，用 Safari 重新整理本頁。</li>";
+  html += "<li>點開下面的 API 連結，看瀏覽器能不能直接開啟（應看到 JSON）。</li>";
+  html += "<li>把本頁錯誤畫面截圖傳回對話，我再幫你看。</li>";
+  html += "</ol><p>本工具會呼叫的 API：</p><ul class=\"urls\">";
+  links.forEach(function (u) {
+    html += "<li><a href=\"" + u.replace(/"/g, "&quot;") + "\" target=\"_blank\" rel=\"noopener\">" + u + "</a></li>";
+  });
+  if (urls && urls.length > links.length) {
+    html += "<li>……還有 " + (urls.length - links.length) + " 個分頁網址</li>";
+  }
+  html += "</ul>";
+  box.innerHTML = html;
+  box.querySelector("pre.raw").textContent = raw;
+}
+
+async function fetchInstrumentInfo() {
+  const data = await fetchJsonWithRetry(infoUrl());
+  if (data.retCode !== 0) throw new Error("Bybit retCode=" + data.retCode + " " + (data.retMsg || ""));
+  const item = ((data.result && data.result.list) || [])[0];
+  if (!item) throw new Error("instruments-info 沒有回傳 BTCUSD");
+  return {
+    symbol: item.symbol,
+    contractType: item.contractType,
+    settleCoin: item.settleCoin,
+    fundingInterval: Number(item.fundingInterval) || 480,
+    launchTime: item.launchTime ? Number(item.launchTime) : EXPECTED_START,
+    status: item.status
+  };
+}
+
+async function fetchAllFunding(intervalMin, onProgress) {
+  const all = [];
+  const seen = new Set();
+  const urls = [];
+  let endTime = null;
+  let pages = 0;
+  const expected = Math.ceil((Date.now() - EXPECTED_START) / ((intervalMin || 480) * 60 * 1000));
+
+  while (pages < MAX_PAGES) {
+    const url = firstFundingUrl(endTime);
+    urls.push(url);
+    const data = await fetchJsonWithRetry(url);
+    if (data.retCode !== 0) throw new Error("Bybit retCode=" + data.retCode + " " + (data.retMsg || ""));
+    const list = (data.result && data.result.list) || [];
+    pages += 1;
+    let oldest = Infinity;
+    for (let i = 0; i < list.length; i++) {
+      const ts = Number(list[i].fundingRateTimestamp);
+      const rate = Number(list[i].fundingRate);
+      if (!isFinite(ts) || !isFinite(rate) || seen.has(ts)) continue;
+      seen.add(ts);
+      all.push({ ts: ts, rate: rate });
+      if (ts < oldest) oldest = ts;
+    }
+    if (onProgress) onProgress(pages, all.length, expected, oldest);
+    if (list.length < PAGE_SIZE || oldest === Infinity) break;
+    endTime = oldest - 1;
+    await sleep(PAGE_DELAY_MS);
+  }
+  all.sort(function (a, b) { return a.ts - b.ts; });
+  return { rows: all, urls: urls, pages: pages };
+}
+
+function renderMeta(info, stats) {
+  const el = $("meta");
+  el.classList.remove("hidden");
+  const intervalH = info.fundingInterval / 60;
+  el.innerHTML =
+    "<p><strong>交易對：</strong>Bybit " + (info.contractType || "Inverse") + " " + SYMBOL + "／USDT 不是這個頁面；這是<strong>幣本位（inverse）BTCUSD</strong>。</p>" +
+    "<p><strong>結算幣：</strong>" + (info.settleCoin || "BTC") +
+    "　<strong>資金費間隔：</strong><span class=\"num\">" + info.fundingInterval + " 分鐘（" + intervalH + " 小時）</span></p>" +
+    "<p><strong>資料區間：</strong><span class=\"num\">" + formatTaipei(stats.firstTs) + " ～ " + formatTaipei(stats.lastTs) + "（台北時間）</span><br>" +
+    "<span class=\"muted num\">UTC " + formatUTC(stats.firstTs) + " ～ " + formatUTC(stats.lastTs) + "</span></p>" +
+    "<p><strong>筆數：</strong><span class=\"num\">" + stats.count.toLocaleString("en-US") +
+    "</span>　<strong>期間天數：</strong><span class=\"num\">" + (stats.elapsedDays != null ? stats.elapsedDays.toFixed(2) : "—") + "</span></p>";
+}
+
+function renderKpis(stats) {
+  const el = $("kpis");
+  el.classList.remove("hidden");
+  el.className = "kpi-grid";
+  const items = [
+    ["全期年化", signedPct(stats.annualized), stats.annualized],
+    ["近 30 天年化", signedPct(stats.last30 && stats.last30.annualized), stats.last30 && stats.last30.annualized],
+    ["近 90 天年化", signedPct(stats.last90 && stats.last90.annualized), stats.last90 && stats.last90.annualized],
+    ["近 365 天年化", signedPct(stats.last365 && stats.last365.annualized), stats.last365 && stats.last365.annualized],
+    ["每筆平均", signedPct(stats.mean, 4), stats.mean],
+    ["正／零／負",
+      pct(stats.pctPositive, 1) + "／" + pct(stats.pctZero, 1) + "／" + pct(stats.pctNegative, 1),
+      null]
+  ];
+  let html = "";
+  items.forEach(function (it) {
+    html += "<div class=\"kpi\"><div class=\"label\">" + it[0] + "</div><div class=\"value " + clsSign(it[2]) + "\">" + it[1] + "</div></div>";
+  });
+  html += "<div class=\"kpi\"><div class=\"label\">單次最高</div><div class=\"value " + clsSign(stats.max.rate) + "\">" +
+    signedPct(stats.max.rate, 4) + "</div><div class=\"muted num\">" + formatTaipei(stats.max.ts) + " 台北時間</div></div>";
+  html += "<div class=\"kpi\"><div class=\"label\">單次最低</div><div class=\"value " + clsSign(stats.min.rate) + "\">" +
+    signedPct(stats.min.rate, 4) + "</div><div class=\"muted num\">" + formatTaipei(stats.min.ts) + " 台北時間</div></div>";
+  el.innerHTML = html;
+}
+
+function renderPosition(stats) {
+  const el = $("posBox");
+  el.classList.remove("hidden");
+  function row(label, yearly, window) {
+    const n = yearly;
+    const longTxt = n == null ? "—" : (n >= 0 ? "多頭約支付 " + money(n) : "多頭約收取 " + money(-n));
+    const shortTxt = n == null ? "—" : (n >= 0 ? "空頭約收取 " + money(n) : "空頭約支付 " + money(-n));
+    const extra = window && window.count ? "（" + window.count.toLocaleString("en-US") + " 筆，" + (window.elapsedDays ? window.elapsedDays.toFixed(1) + " 天" : "") + "）" : "";
+    return "<tr><td>" + label + extra + "</td><td class=\"" + clsSign(n) + "\">" + money(n) + "</td><td>" + longTxt + "／" + shortTxt + "</td></tr>";
+  }
+  el.innerHTML = "<h2>2 萬美元倉位一年資金費</h2>" +
+    "<p class=\"muted\">以該期間年化 × $20,000。正費率時多頭支付、空頭收取。幣本位實際以 BTC 結算，下表為美元等值。</p>" +
+    "<table><thead><tr><th>期間</th><th>一年等值</th><th>多／空</th></tr></thead><tbody>" +
+    row("全期", stats.fullYearlyUsd, { count: stats.count, elapsedDays: stats.elapsedDays }) +
+    row("近 365 天", stats.last365 && stats.last365.yearlyUsd, stats.last365) +
+    row("近 90 天", stats.last90 && stats.last90.yearlyUsd, stats.last90) +
+    "</tbody></table>";
+}
+
+function renderYears(stats) {
+  const el = $("yearBox");
+  el.classList.remove("hidden");
+  let html = "<h2>各年年化（UTC 曆年）</h2><table><thead><tr><th>年份</th><th>筆數</th><th>費率加總</th><th>樣本天數</th><th>年化</th></tr></thead><tbody>";
+  stats.years.forEach(function (y) {
+    html += "<tr><td class=\"num\">" + y.year + "</td><td class=\"num\">" + y.count.toLocaleString("en-US") +
+      "</td><td class=\"" + clsSign(y.sum) + "\">" + signedPct(y.sum, 3) +
+      "</td><td class=\"num\">" + (y.elapsedDays != null ? y.elapsedDays.toFixed(1) : "—") +
+      "</td><td class=\"" + clsSign(y.annualized) + "\">" + signedPct(y.annualized) + "</td></tr>";
+  });
+  html += "<tr><td><strong>合計</strong></td><td class=\"num\"><strong>" + stats.count.toLocaleString("en-US") +
+    "</strong></td><td class=\"" + clsSign(stats.yearsSum) + "\"><strong>" + signedPct(stats.yearsSum, 3) +
+    "</strong></td><td class=\"num\">" + (stats.elapsedDays != null ? stats.elapsedDays.toFixed(1) : "—") +
+    "</td><td class=\"" + clsSign(stats.annualized) + "\"><strong>" + signedPct(stats.annualized) + "</strong></td></tr>";
+  html += "</tbody></table>";
+  el.innerHTML = html;
+}
+
+function cssVar(name, fallback) {
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
+}
+
+function setupCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const w = Math.max(1, Math.floor(rect.width));
+  const h = Math.max(1, Math.floor(rect.height));
+  canvas.width = Math.floor(w * dpr);
+  canvas.height = Math.floor(h * dpr);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx: ctx, w: w, h: h };
+}
+
+function drawLineChart(canvas, rows) {
+  const { ctx, w, h } = setupCanvas(canvas);
+  const pad = { l: 54, r: 12, t: 16, b: 32 };
+  ctx.clearRect(0, 0, w, h);
+  if (!rows.length) return;
+  let cum = 0;
+  const pts = rows.map(function (r) { cum += r.rate; return { x: r.ts, y: cum }; });
+  const minX = pts[0].x, maxX = pts[pts.length - 1].x;
+  let minY = 0, maxY = 0;
+  pts.forEach(function (p) { if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y; });
+  if (minY === maxY) { minY -= 0.01; maxY += 0.01; }
+  const plotW = w - pad.l - pad.r, plotH = h - pad.t - pad.b;
+  const xOf = function (x) { return pad.l + (x - minX) / Math.max(1, maxX - minX) * plotW; };
+  const yOf = function (y) { return pad.t + (maxY - y) / (maxY - minY) * plotH; };
+  const grid = cssVar("--grid", "#ccc");
+  const muted = cssVar("--muted", "#888");
+  const line = cssVar("--btc", "#f7931a");
+  const text = cssVar("--text", "#111");
+  ctx.strokeStyle = grid;
+  ctx.fillStyle = muted;
+  ctx.font = "11px sans-serif";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  const ticks = 4;
+  for (let i = 0; i <= ticks; i++) {
+    const yv = minY + (maxY - minY) * (1 - i / ticks);
+    const y = yOf(yv);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+    ctx.fillText((yv * 100).toFixed(1) + "%", pad.l - 6, y);
+  }
+  const zeroY = yOf(0);
+  ctx.strokeStyle = muted;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(pad.l, zeroY); ctx.lineTo(w - pad.r, zeroY); ctx.stroke();
+  ctx.setLineDash([]);
+  const firstYear = new Date(minX).getUTCFullYear();
+  const lastYear = new Date(maxX).getUTCFullYear();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  for (let y = firstYear; y <= lastYear; y++) {
+    const ts = Date.UTC(y, 0, 1);
+    if (ts < minX || ts > maxX) continue;
+    const x = xOf(ts);
+    ctx.strokeStyle = grid;
+    ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + plotH); ctx.stroke();
+    ctx.fillStyle = muted;
+    ctx.fillText(String(y), x, pad.t + plotH + 6);
+  }
+  ctx.strokeStyle = line;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i < pts.length; i++) {
+    const x = xOf(pts[i].x), y = yOf(pts[i].y);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.fillStyle = text;
+  ctx.textAlign = "left";
+  ctx.fillText("累計", pad.l, 8);
+}
+
+function drawBarChart(canvas, years) {
+  const { ctx, w, h } = setupCanvas(canvas);
+  const pad = { l: 54, r: 12, t: 16, b: 32 };
+  ctx.clearRect(0, 0, w, h);
+  if (!years.length) return;
+  let minY = 0, maxY = 0;
+  years.forEach(function (y) {
+    const v = y.annualized || 0;
+    if (v < minY) minY = v;
+    if (v > maxY) maxY = v;
+  });
+  if (minY === maxY) { minY -= 0.01; maxY += 0.01; }
+  const plotW = w - pad.l - pad.r, plotH = h - pad.t - pad.b;
+  const yOf = function (y) { return pad.t + (maxY - y) / (maxY - minY) * plotH; };
+  const grid = cssVar("--grid", "#ccc");
+  const muted = cssVar("--muted", "#888");
+  const up = cssVar("--up", "#12804f");
+  const down = cssVar("--down", "#c2382f");
+  ctx.strokeStyle = grid;
+  ctx.fillStyle = muted;
+  ctx.font = "11px sans-serif";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  for (let i = 0; i <= 4; i++) {
+    const yv = minY + (maxY - minY) * (1 - i / 4);
+    const y = yOf(yv);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+    ctx.fillText((yv * 100).toFixed(1) + "%", pad.l - 6, y);
+  }
+  const zeroY = yOf(0);
+  ctx.strokeStyle = muted;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(pad.l, zeroY); ctx.lineTo(w - pad.r, zeroY); ctx.stroke();
+  ctx.setLineDash([]);
+  const slot = plotW / years.length;
+  const barW = Math.max(8, Math.min(36, slot * 0.62));
+  years.forEach(function (item, i) {
+    const v = item.annualized || 0;
+    const x = pad.l + slot * i + (slot - barW) / 2;
+    const y = yOf(v);
+    const top = Math.min(y, zeroY);
+    const height = Math.max(1, Math.abs(y - zeroY));
+    ctx.fillStyle = v >= 0 ? up : down;
+    ctx.fillRect(x, top, barW, height);
+    ctx.fillStyle = muted;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(String(item.year), x + barW / 2, pad.t + plotH + 6);
+  });
+}
+
+function renderCharts(rows, stats) {
+  $("chartBox1").classList.remove("hidden");
+  $("chartBox2").classList.remove("hidden");
+  drawLineChart($("cumChart"), rows);
+  drawBarChart($("yearChart"), stats.years);
+}
+
+function buildCsv(rows) {
+  let out = "timestamp_utc,funding_rate\n";
+  for (let i = 0; i < rows.length; i++) {
+    out += formatUTC(rows[i].ts) + "," + rows[i].rate + "\n";
+  }
+  return out;
+}
+
+function buildSummary(info, stats) {
+  const lines = [];
+  lines.push("Bybit 幣本位 BTCUSD 資金費率回測");
+  lines.push("資料來源：Bybit API v5（瀏覽器直連，category=inverse&symbol=BTCUSD）");
+  if (info) {
+    lines.push("結算幣：" + (info.settleCoin || "BTC") + "；資金費間隔：" + info.fundingInterval + " 分鐘");
+  }
+  lines.push("區間（台北時間）：" + formatTaipei(stats.firstTs) + " ～ " + formatTaipei(stats.lastTs));
+  lines.push("區間（UTC）：" + formatUTC(stats.firstTs) + " ～ " + formatUTC(stats.lastTs));
+  lines.push("筆數：" + stats.count + "；期間天數：" + (stats.elapsedDays != null ? stats.elapsedDays.toFixed(4) : "null"));
+  lines.push("全期年化：" + signedPct(stats.annualized));
+  lines.push("近 30 天年化：" + signedPct(stats.last30 && stats.last30.annualized));
+  lines.push("近 90 天年化：" + signedPct(stats.last90 && stats.last90.annualized));
+  lines.push("近 365 天年化：" + signedPct(stats.last365 && stats.last365.annualized));
+  lines.push("每筆平均：" + signedPct(stats.mean, 4));
+  lines.push("正/零/負：" + pct(stats.pctPositive, 2) + " / " + pct(stats.pctZero, 2) + " / " + pct(stats.pctNegative, 2));
+  lines.push("單次最高：" + signedPct(stats.max.rate, 4) + " @ " + formatTaipei(stats.max.ts) + " 台北時間（" + formatUTC(stats.max.ts) + "）");
+  lines.push("單次最低：" + signedPct(stats.min.rate, 4) + " @ " + formatTaipei(stats.min.ts) + " 台北時間（" + formatUTC(stats.min.ts) + "）");
+  lines.push("各年年化（UTC 曆年）：");
+  stats.years.forEach(function (y) {
+    lines.push("- " + y.year + "：年化 " + signedPct(y.annualized) + "，加總 " + signedPct(y.sum, 3) + "，" + y.count + " 筆，" + (y.elapsedDays != null ? y.elapsedDays.toFixed(2) : "—") + " 天");
+  });
+  lines.push("各年費率加總合計：" + signedPct(stats.yearsSum, 3));
+  lines.push("2 萬美元倉位一年資金費（正費率時多頭支付、空頭收取；幣本位以 BTC 結算，下列為美元等值）：");
+  lines.push("- 全期：" + money(stats.fullYearlyUsd));
+  lines.push("- 近 365 天：" + money(stats.last365 && stats.last365.yearlyUsd));
+  lines.push("- 近 90 天：" + money(stats.last90 && stats.last90.yearlyUsd));
+  const json = {
+    symbol: "BTCUSD",
+    category: "inverse",
+    settleCoin: info && info.settleCoin || "BTC",
+    fundingIntervalMin: info && info.fundingInterval || null,
+    firstTsUtc: formatUTC(stats.firstTs),
+    lastTsUtc: formatUTC(stats.lastTs),
+    count: stats.count,
+    elapsedDays: stats.elapsedDays,
+    annualized: stats.annualized,
+    last30: stats.last30 && stats.last30.annualized,
+    last90: stats.last90 && stats.last90.annualized,
+    last365: stats.last365 && stats.last365.annualized,
+    mean: stats.mean,
+    pctPositive: stats.pctPositive,
+    pctZero: stats.pctZero,
+    pctNegative: stats.pctNegative,
+    max: stats.max,
+    min: stats.min,
+    years: stats.years,
+    yearsSum: stats.yearsSum,
+    positionUsd: stats.positionUsd,
+    fullYearlyUsd: stats.fullYearlyUsd,
+    last365YearlyUsd: stats.last365 && stats.last365.yearlyUsd,
+    last90YearlyUsd: stats.last90 && stats.last90.yearlyUsd
+  };
+  lines.push("");
+  lines.push("```json");
+  lines.push(JSON.stringify(json));
+  lines.push("```");
+  return lines.join("\n");
+}
+
+function downloadCsv(rows) {
+  const text = buildCsv(rows);
+  const filename = "bybit-btcusd-inverse-funding.csv";
+  const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+}
+
+async function copySummary() {
+  if (!lastStats) return;
+  const text = buildSummary(lastMeta, lastStats);
+  try {
+    await navigator.clipboard.writeText(text);
+    toast("已複製結果，可貼回對話");
+  } catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    const ok = document.execCommand("copy");
+    ta.remove();
+    toast(ok ? "已複製結果，可貼回對話" : "複製失敗，請改用下載 CSV");
+  }
+}
+
+function resetView() {
+  $("errorBox").classList.add("hidden");
+  $("errorBox").innerHTML = "";
+  ["meta", "kpis", "posBox", "yearBox", "chartBox1", "chartBox2"].forEach(function (id) {
+    $(id).classList.add("hidden");
+  });
+  $("progressBar").style.width = "0%";
+  $("progressText").textContent = "";
+}
+
+async function run() {
+  if (running) return;
+  running = true;
+  $("btnRun").disabled = true;
+  $("btnCsv").disabled = true;
+  $("btnCopy").disabled = true;
+  resetView();
+  lastRows = [];
+  lastStats = null;
+  lastMeta = null;
+  lastUrls = [infoUrl(), firstFundingUrl()];
+  $("status").textContent = "正在向 Bybit 請求合約資訊與資金費歷史…";
+  try {
+    const info = await fetchInstrumentInfo();
+    lastMeta = info;
+    const expected = Math.ceil((Date.now() - (info.launchTime || EXPECTED_START)) / (info.fundingInterval * 60 * 1000));
+    setProgress(0, 0, expected);
+    const result = await fetchAllFunding(info.fundingInterval, function (pages, rows, exp) {
+      $("status").textContent = "正在分頁抓取歷史資金費率…請保持此頁開啟。";
+      setProgress(pages, rows, exp);
+    });
+    lastUrls = [infoUrl()].concat(result.urls);
+    lastRows = result.rows;
+    if (!lastRows.length) throw new Error("API 回傳 0 筆資金費率");
+    lastStats = computeFundingStats(lastRows, {
+      now: Date.now(),
+      positionUsd: POSITION_USD,
+      intervalMin: info.fundingInterval
+    });
+    $("status").textContent = "計算完成。建議按「複製結果」貼回對話。";
+    $("progressBar").style.width = "100%";
+    renderMeta(info, lastStats);
+    renderKpis(lastStats);
+    renderPosition(lastStats);
+    renderYears(lastStats);
+    renderCharts(lastRows, lastStats);
+    $("btnCsv").disabled = false;
+    $("btnCopy").disabled = false;
+  } catch (err) {
+    $("status").textContent = "抓取失敗。";
+    if (lastRows.length) {
+      lastStats = computeFundingStats(lastRows, {
+        now: Date.now(),
+        positionUsd: POSITION_USD,
+        intervalMin: (lastMeta && lastMeta.fundingInterval) || 480
+      });
+      if (lastMeta) renderMeta(lastMeta, lastStats);
+      renderKpis(lastStats);
+      renderPosition(lastStats);
+      renderYears(lastStats);
+      renderCharts(lastRows, lastStats);
+      $("btnCsv").disabled = false;
+      $("btnCopy").disabled = false;
+    }
+    showError(err, lastUrls, lastRows.length);
+  } finally {
+    running = false;
+    $("btnRun").disabled = false;
+  }
+}
+
+$("btnRun").addEventListener("click", run);
+$("btnCsv").addEventListener("click", function () { if (lastRows.length) downloadCsv(lastRows); });
+$("btnCopy").addEventListener("click", copySummary);
+window.addEventListener("resize", function () {
+  if (lastRows.length && lastStats) renderCharts(lastRows, lastStats);
+});
+run();
+</script>
+</body>
+</html>
