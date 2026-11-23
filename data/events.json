@@ -1,5 +1,5 @@
 {
-  "generated_at": 1795438845,
+  "generated_at": 1795438876,
   "count": 300,
   "events": [
     {
@@ -8102,6 +8102,5 @@
       "conversion_price": null,
       "notes": null
     }
-  ],
-  "worker_url": "https://btc-monitor-sec.herry162.workers.dev"
+  ]
 }
