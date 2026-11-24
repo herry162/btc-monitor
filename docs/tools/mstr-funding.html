@@ -1,0 +1,1137 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Bybit 與幣安 MSTRUSDT 資金費率回測</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>M</text></svg>">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f2f5f7;
+    --panel: #ffffff;
+    --line: #dce3e9;
+    --grid: rgba(18, 32, 43, 0.07);
+    --text: #12202b;
+    --muted: #5a6a77;
+    --btc: #b86200;
+    --up: #12804f;
+    --down: #c2382f;
+    --warn: #8a6a00;
+    --warn-bg: rgba(138, 106, 0, 0.10);
+    --err-bg: rgba(194, 56, 47, 0.10);
+    --btn: #12202b;
+    --btn-text: #ffffff;
+    --btn-secondary: #ffffff;
+    --accent: #1a6fbf;
+    --binance: #c99700;
+    --bybit: #d65a12;
+    --num: "Barlow Semi Condensed", "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    --cjk: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Heiti TC", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #0d1620;
+      --panel: #142230;
+      --line: #22313f;
+      --grid: rgba(227, 234, 240, 0.06);
+      --text: #e3eaf0;
+      --muted: #8394a2;
+      --btc: #f7931a;
+      --up: #2db57b;
+      --down: #e5544b;
+      --warn: #d9b44a;
+      --warn-bg: rgba(217, 180, 74, 0.12);
+      --err-bg: rgba(229, 84, 75, 0.14);
+      --btn: #e3eaf0;
+      --btn-text: #12202b;
+      --btn-secondary: #1a2b3a;
+      --accent: #6ea8e8;
+      --binance: #f0b90b;
+      --bybit: #f7931a;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--cjk);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    padding: env(safe-area-inset-top, 0) 16px env(safe-area-inset-bottom, 16px);
+  }
+  main { max-width: 880px; margin: 0 auto; padding: 20px 0 56px; }
+  h1 { font-size: 1.35rem; line-height: 1.35; margin: 0 0 8px; }
+  .lead, .note, .muted { color: var(--muted); }
+  .lead { margin: 0 0 16px; }
+  a { color: var(--accent); }
+  .num { font-family: var(--num); font-variant-numeric: tabular-nums; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
+    margin: 0 0 14px;
+  }
+  .row-btns { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+  button {
+    appearance: none;
+    border: 1px solid transparent;
+    background: var(--btn);
+    color: var(--btn-text);
+    font: inherit;
+    font-weight: 600;
+    padding: 10px 14px;
+    border-radius: 10px;
+    min-height: 44px;
+    cursor: pointer;
+  }
+  button.secondary {
+    background: var(--btn-secondary);
+    color: var(--text);
+    border-color: var(--line);
+  }
+  button:disabled { opacity: 0.55; cursor: default; }
+  .progress-track {
+    height: 8px;
+    background: var(--line);
+    border-radius: 99px;
+    overflow: hidden;
+    margin: 8px 0 4px;
+  }
+  .progress-bar { height: 100%; width: 0; background: var(--btc); transition: width 0.2s ease; }
+  .progress-bar.binance { background: var(--binance); }
+  .progress-bar.bybit { background: var(--bybit); }
+  .prog-label { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  @media (min-width: 720px) {
+    .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .venue-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .venue-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 0 0 14px; }
+  .kpi, .venue {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+  }
+  .kpi .label, .venue .label { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+  .kpi .value { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.01em; }
+  .pos { color: var(--up); }
+  .neg { color: var(--down); }
+  .dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .dot.binance { background: var(--binance); }
+  .dot.bybit { background: var(--bybit); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: right; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 600; }
+  .chart-wrap { position: relative; width: 100%; height: 280px; margin-top: 8px; }
+  canvas { width: 100%; height: 100%; display: block; }
+  h2 { font-size: 1.05rem; margin: 0 0 8px; }
+  .error {
+    background: var(--err-bg);
+    border: 1px solid var(--down);
+    border-radius: 12px;
+    padding: 14px;
+    margin: 0 0 14px;
+  }
+  .error pre, .raw {
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 13px;
+    background: rgba(0,0,0,0.06);
+    padding: 10px;
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+  .urls { padding-left: 18px; margin: 8px 0; }
+  .urls li { margin: 6px 0; word-break: break-all; }
+  .hidden { display: none !important; }
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    background: var(--btn);
+    color: var(--btn-text);
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 14px;
+    z-index: 20;
+  }
+  footer { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .back { font-size: 14px; margin-bottom: 0; display: inline-block; }
+  .switch { margin-bottom: 12px; }
+  .legend { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="switch">
+    <a class="back" href="../">← 回到監控首頁</a>
+    <span class="muted">｜</span>
+    <a class="back" href="bybit-funding-usdt.html">BTCUSDT</a>
+    <span class="muted">｜</span>
+    <a class="back" href="bybit-funding.html">BTCUSD</a>
+  </div>
+  <h1>Bybit 與幣安 MSTRUSDT 資金費率回測</h1>
+  <p class="lead">在你自己的瀏覽器向兩家交易所的公開 API 抓取 Strategy（Nasdaq: MSTR）股票永續合約的完整資金費歷史。資料不會經過我們的伺服器。Bybit 在部分地區會被擋，請用台灣網路開啟並保持此頁直到算完。</p>
+
+  <div class="panel">
+    <div id="status">準備開始…</div>
+    <div class="prog-label"><span class="dot binance"></span>幣安</div>
+    <div class="progress-track"><div class="progress-bar binance" id="barBinance"></div></div>
+    <div class="muted num" id="textBinance"></div>
+    <div class="prog-label"><span class="dot bybit"></span>Bybit</div>
+    <div class="progress-track"><div class="progress-bar bybit" id="barBybit"></div></div>
+    <div class="muted num" id="textBybit"></div>
+    <div class="row-btns">
+      <button type="button" id="btnRun">重新計算</button>
+      <button type="button" id="btnCsv" class="secondary" disabled>下載 CSV</button>
+      <button type="button" id="btnCopy" class="secondary" disabled>複製結果</button>
+    </div>
+  </div>
+
+  <div id="errorBox" class="error hidden"></div>
+  <div id="venues" class="venue-grid hidden"></div>
+  <section id="compareBox" class="panel hidden"></section>
+  <section id="posBox" class="panel hidden"></section>
+  <section id="monthBox" class="panel hidden"></section>
+  <section id="yearBox" class="panel hidden"></section>
+  <section id="chartBox1" class="panel hidden">
+    <h2>累計資金費率對照</h2>
+    <p class="legend"><span class="dot binance"></span>幣安　<span class="dot bybit"></span>Bybit。縱軸是各次費率的累加，不是年化。Bybit 較晚上市，曲線會晚一點才開始。</p>
+    <div class="chart-wrap"><canvas id="cumChart"></canvas></div>
+  </section>
+  <section id="chartBox2" class="panel hidden">
+    <h2>各月年化資金費率</h2>
+    <div class="chart-wrap"><canvas id="monthChart"></canvas></div>
+  </section>
+  <section id="explain" class="panel">
+    <h2>這張合約在比什麼</h2>
+    <p>這是追蹤 Strategy（原 MicroStrategy）普通股的 USDT 永續合約，不是比特幣本身。兩邊代號都是 <span class="num">MSTRUSDT</span>，以 USDT 保證金與結算，目前都是每 8 小時結算一次資金費（00:00、08:00、16:00 UTC）。正費率時多頭支付、空頭收取；負費率相反。</p>
+    <p>和直接持有 MSTR 股票的差別：永續沒有股東權利（投票、實物股份），但可以 24 小時交易、用保證金做多或做空。股票本身沒有資金費，卻要承擔股價漲跌，而且主要只在美股時段成交。股票永續在週末和美股盤外，價差與資金費都可能比較大。</p>
+    <p>常見的期現套利是：買進真實 MSTR 股票，同時在交易所放空同額 MSTRUSDT 永續。股價漲跌大致對沖，主要賺或賠資金費。正費率時這組倉位收取資金費，負費率則要支付。若空的是股票現貨，還可能有借券成本，本頁沒有計算。</p>
+    <p>幣安這類股票永續的資金費「利息」成分為 0%，費率上限為每期 ±2%，即使觸及上限也不會改成每小時結算。若標的發放股息，幣安會另外做一次「特別資金費」，由空頭支付給多頭，用來反映除息。MSTR 長期沒有發放現金股息；頁面會標示 <span class="num">rateType</span>，若出現 Special 就是這類調整。</p>
+    <p>本回測不含手續費、滑價、借券成本，也不含股價漲跌本身的損益。不構成投資建議。</p>
+  </section>
+  <footer>
+    年化公式：期間內各次資金費率加總 ÷ 期間天數 × 365。2 萬 USDT 倉位的「實際累計」是該期間費率加總 × 20,000；「一年（年化）」是年化 × 20,000。時間預設以台北時間（UTC+8）顯示，各年、各月統計採用 UTC。幣安公開歷史含上市前數筆為 0 的結算，加總不受影響。
+  </footer>
+</main>
+<script>
+/* === FUNDING_STATS_START === */
+function elapsedDaysOf(startTs, endTs, intervalMin) {
+  const raw = (Number(endTs) - Number(startTs)) / 86400000;
+  if (raw > 0) return raw;
+  if (intervalMin) return Number(intervalMin) / (60 * 24);
+  return null;
+}
+function sumRates(rows) {
+  let s = 0;
+  for (let i = 0; i < rows.length; i++) s += rows[i].rate;
+  return s;
+}
+function windowStats(rows, startTs, endTs, intervalMin) {
+  const subset = [];
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (r.ts >= startTs && r.ts <= endTs) subset.push(r);
+  }
+  const sum = sumRates(subset);
+  if (!subset.length) {
+    return { count: 0, sum: 0, elapsedDays: 0, annualized: null, firstTs: null, lastTs: null };
+  }
+  const firstTs = subset[0].ts;
+  const lastTs = subset[subset.length - 1].ts;
+  const elapsedDays = elapsedDaysOf(Math.max(startTs, firstTs), lastTs, intervalMin);
+  const annualized = elapsedDays ? sum / elapsedDays * 365 : null;
+  return { count: subset.length, sum, elapsedDays, annualized, firstTs, lastTs };
+}
+function computeFundingStats(rows, options) {
+  options = options || {};
+  const now = options.now != null ? options.now : Date.now();
+  const positionUsd = options.positionUsd != null ? options.positionUsd : 20000;
+  const intervalMin = options.intervalMin != null ? options.intervalMin : 480;
+  const sorted = rows.slice().sort(function (a, b) { return a.ts - b.ts; });
+  const count = sorted.length;
+  if (!count) {
+    return {
+      count: 0, firstTs: null, lastTs: null, sum: 0, elapsedDays: 0,
+      annualized: null, mean: null, posCount: 0, zeroCount: 0, negCount: 0,
+      pctPositive: null, pctZero: null, pctNegative: null,
+      max: null, min: null, years: [], months: [], yearsSum: 0, positionUsd: positionUsd,
+      fullYearlyUsd: null, actualUsd: null, last30: null, last90: null, last365: null
+    };
+  }
+  const firstTs = sorted[0].ts;
+  const lastTs = sorted[count - 1].ts;
+  const sum = sumRates(sorted);
+  const elapsedDays = elapsedDaysOf(firstTs, lastTs, intervalMin);
+  const annualized = elapsedDays ? sum / elapsedDays * 365 : null;
+  const mean = sum / count;
+  let posCount = 0, zeroCount = 0, negCount = 0;
+  let max = sorted[0], min = sorted[0];
+  for (let i = 0; i < count; i++) {
+    const r = sorted[i];
+    if (r.rate > 0) posCount += 1;
+    else if (r.rate < 0) negCount += 1;
+    else zeroCount += 1;
+    if (r.rate > max.rate) max = r;
+    if (r.rate < min.rate) min = r;
+  }
+  function groupBy(keyFn) {
+    const map = new Map();
+    for (let i = 0; i < count; i++) {
+      const r = sorted[i];
+      const key = keyFn(r);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(r);
+    }
+    const keys = Array.from(map.keys()).sort();
+    const out = [];
+    for (let i = 0; i < keys.length; i++) {
+      const list = map.get(keys[i]);
+      const ySum = sumRates(list);
+      const yElapsed = elapsedDaysOf(list[0].ts, list[list.length - 1].ts, intervalMin);
+      out.push({
+        key: keys[i],
+        count: list.length,
+        sum: ySum,
+        elapsedDays: yElapsed,
+        annualized: yElapsed ? ySum / yElapsed * 365 : null,
+        actualUsd: ySum * positionUsd
+      });
+    }
+    return out;
+  }
+  const years = groupBy(function (r) { return String(new Date(r.ts).getUTCFullYear()); }).map(function (x) {
+    return { year: Number(x.key), count: x.count, sum: x.sum, elapsedDays: x.elapsedDays, annualized: x.annualized, actualUsd: x.actualUsd };
+  });
+  const months = groupBy(function (r) {
+    const d = new Date(r.ts);
+    return d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0");
+  }).map(function (x) {
+    return { month: x.key, count: x.count, sum: x.sum, elapsedDays: x.elapsedDays, annualized: x.annualized, actualUsd: x.actualUsd };
+  });
+  let yearsSum = 0;
+  for (let i = 0; i < years.length; i++) yearsSum += years[i].sum;
+  function lastN(days) {
+    const start = now - days * 86400000;
+    const st = windowStats(sorted, start, now, intervalMin);
+    return Object.assign({}, st, {
+      yearlyUsd: st.annualized == null ? null : positionUsd * st.annualized,
+      actualUsd: st.count ? positionUsd * st.sum : null,
+      days: days
+    });
+  }
+  return {
+    count: count, firstTs: firstTs, lastTs: lastTs, sum: sum, elapsedDays: elapsedDays,
+    annualized: annualized, mean: mean, posCount: posCount, zeroCount: zeroCount, negCount: negCount,
+    pctPositive: posCount / count, pctZero: zeroCount / count, pctNegative: negCount / count,
+    max: { ts: max.ts, rate: max.rate }, min: { ts: min.ts, rate: min.rate },
+    years: years, months: months, yearsSum: yearsSum, positionUsd: positionUsd,
+    fullYearlyUsd: annualized == null ? null : positionUsd * annualized,
+    actualUsd: positionUsd * sum, last30: lastN(30), last90: lastN(90), last365: lastN(365)
+  };
+}
+/* === FUNDING_STATS_END === */
+
+const POSITION_USD = 20000;
+const BINANCE_SYMBOL = "MSTRUSDT";
+const BYBIT_SYMBOL = "MSTRUSDT";
+const BINANCE_ONBOARD = Date.UTC(2026, 1, 9, 14, 30);
+const BINANCE_HISTORY_START = Date.UTC(2026, 1, 6, 16);
+const BYBIT_LAUNCH_FALLBACK = Date.UTC(2026, 3, 29);
+const BYBIT_API = "https://api.bybit.com";
+const BINANCE_BASES = ["https://fapi.binance.com", "https://www.binance.com"];
+const PAGE_SIZE = 200;
+const PAGE_DELAY_MS = 280;
+const MAX_BYBIT_PAGES = 40;
+const INTERVAL_MIN = 480;
+
+let last = {
+  binance: { rows: [], stats: null, meta: null, error: null, source: null, urls: [] },
+  bybit: { rows: [], stats: null, meta: null, error: null, source: null, urls: [] }
+};
+let running = false;
+
+function $(id) { return document.getElementById(id); }
+function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+function formatTaipei(ts, withSeconds) {
+  if (ts == null) return "—";
+  const opt = {
+    timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+  };
+  if (withSeconds) opt.second = "2-digit";
+  const parts = new Intl.DateTimeFormat("en-CA", opt).formatToParts(new Date(ts));
+  const get = function (t) {
+    for (let i = 0; i < parts.length; i++) if (parts[i].type === t) return parts[i].value;
+    return "";
+  };
+  const date = get("year") + "-" + get("month") + "-" + get("day");
+  const time = get("hour") + ":" + get("minute") + (withSeconds ? ":" + get("second") : "");
+  return date + " " + time;
+}
+function formatUTC(ts) {
+  if (ts == null) return "—";
+  return new Date(ts).toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+function pct(x, digits) {
+  if (x == null || !isFinite(x)) return "—";
+  return (x * 100).toFixed(digits == null ? 2 : digits) + "%";
+}
+function money(x) {
+  if (x == null || !isFinite(x)) return "—";
+  const sign = x < 0 ? "-" : "";
+  return sign + Math.abs(x).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " USDT";
+}
+function signedPct(x, digits) {
+  if (x == null || !isFinite(x)) return "—";
+  const n = (x * 100).toFixed(digits == null ? 2 : digits);
+  return (x > 0 ? "+" : "") + n + "%";
+}
+function clsSign(x) {
+  if (x == null || !isFinite(x) || x === 0) return "num";
+  return "num " + (x > 0 ? "pos" : "neg");
+}
+function toast(msg) {
+  const old = document.querySelector(".toast");
+  if (old) old.remove();
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(function () { el.remove(); }, 2200);
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>]/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]; });
+}
+
+async function fetchJsonWithRetry(url, tries) {
+  tries = tries || 5;
+  let lastErr = null;
+  for (let i = 0; i < tries; i++) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (res.status === 429) {
+        await sleep(1000 * Math.pow(2, i));
+        lastErr = new Error("HTTP 429 Too Many Requests");
+        continue;
+      }
+      const text = await res.text();
+      if (!res.ok) {
+        const err = new Error("HTTP " + res.status + " " + res.statusText + (text ? " — " + text.slice(0, 400) : ""));
+        err.status = res.status;
+        err.body = text;
+        if (res.status === 403 || res.status === 401 || res.status === 404 || res.status === 451) throw err;
+        lastErr = err;
+        if (i < tries - 1 && res.status >= 500) {
+          await sleep(800 * Math.pow(2, i));
+          continue;
+        }
+        throw err;
+      }
+      return JSON.parse(text);
+    } catch (e) {
+      lastErr = e;
+      if (e && (e.status === 403 || e.status === 401 || e.status === 404 || e.status === 451)) throw e;
+      if (i < tries - 1) await sleep(800 * Math.pow(2, i));
+    }
+  }
+  throw lastErr || new Error("請求失敗");
+}
+async function fetchFirstOk(urls, tries) {
+  let lastErr = null;
+  const tried = [];
+  for (let i = 0; i < urls.length; i++) {
+    tried.push(urls[i]);
+    try {
+      const data = await fetchJsonWithRetry(urls[i], tries || 3);
+      return { data: data, url: urls[i], tried: tried };
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  if (lastErr) lastErr.tried = tried;
+  throw lastErr || new Error("請求失敗");
+}
+function binanceUrls(path, query) {
+  return BINANCE_BASES.map(function (b) { return b + path + query; });
+}
+function setVenueProgress(venue, pctDone, text) {
+  const bar = venue === "binance" ? $("barBinance") : $("barBybit");
+  const label = venue === "binance" ? $("textBinance") : $("textBybit");
+  bar.style.width = Math.max(0, Math.min(100, pctDone)).toFixed(1) + "%";
+  label.textContent = text || "";
+}
+
+async function fetchBinanceFunding(onProgress) {
+  const urls = [];
+  const all = [];
+  const seen = new Set();
+  let cursor = BINANCE_HISTORY_START;
+  let pages = 0;
+  let sourceBase = null;
+  const expected = Math.ceil((Date.now() - BINANCE_HISTORY_START) / (INTERVAL_MIN * 60 * 1000));
+  while (pages < 20) {
+    const q = "?symbol=" + BINANCE_SYMBOL + "&startTime=" + cursor + "&limit=1000";
+    const candidates = binanceUrls("/fapi/v1/fundingRate", q);
+    urls.push(candidates[0], candidates[1]);
+    const got = await fetchFirstOk(candidates, 3);
+    sourceBase = got.url.split("/fapi/")[0];
+    const list = Array.isArray(got.data) ? got.data : [];
+    pages += 1;
+    let newest = cursor;
+    for (let i = 0; i < list.length; i++) {
+      const ts = Number(list[i].fundingTime);
+      const rate = Number(list[i].fundingRate);
+      if (!isFinite(ts) || !isFinite(rate) || seen.has(ts)) continue;
+      seen.add(ts);
+      all.push({ ts: ts, rate: rate, rateType: list[i].rateType || "Regular", exchange: "binance" });
+      if (ts > newest) newest = ts;
+    }
+    if (onProgress) onProgress(pages, all.length, expected);
+    if (list.length < 1000) break;
+    cursor = newest + 1;
+  }
+  all.sort(function (a, b) { return a.ts - b.ts; });
+  return { rows: all, urls: urls, pages: pages, source: sourceBase ? (sourceBase + " /fapi/v1/fundingRate") : "binance" };
+}
+async function fetchBinanceMeta() {
+  let intervalMin = INTERVAL_MIN, cap = 0.02, onboard = BINANCE_ONBOARD;
+  let contractType = "TRADIFI_PERPETUAL", status = "TRADING";
+  try {
+    const info = await fetchFirstOk(binanceUrls("/fapi/v1/fundingInfo", ""), 2);
+    const list = Array.isArray(info.data) ? info.data : [];
+    for (let i = 0; i < list.length; i++) {
+      if (list[i].symbol === BINANCE_SYMBOL) {
+        if (list[i].fundingIntervalHours) intervalMin = Number(list[i].fundingIntervalHours) * 60;
+        if (list[i].adjustedFundingRateCap != null) cap = Number(list[i].adjustedFundingRateCap);
+        break;
+      }
+    }
+  } catch (e) {}
+  try {
+    const ex = await fetchFirstOk(binanceUrls("/fapi/v1/exchangeInfo", ""), 2);
+    const syms = (ex.data && ex.data.symbols) || [];
+    for (let i = 0; i < syms.length; i++) {
+      if (syms[i].symbol === BINANCE_SYMBOL) {
+        contractType = syms[i].contractType || contractType;
+        status = syms[i].status || status;
+        if (syms[i].onboardDate) onboard = Number(syms[i].onboardDate);
+        break;
+      }
+    }
+  } catch (e) {}
+  return {
+    venue: "binance", name: "幣安", symbol: BINANCE_SYMBOL, contractType: contractType,
+    settleCoin: "USDT", fundingInterval: intervalMin, launchTime: onboard,
+    status: status, cap: cap, interestRate: 0
+  };
+}
+async function loadBinanceSnapshot() {
+  const url = "mstr-funding-binance-snapshot.json";
+  const data = await fetchJsonWithRetry(url, 2);
+  const rows = (data.rows || []).map(function (pair) {
+    return { ts: Number(pair[0]), rate: Number(pair[1]), rateType: "Regular", exchange: "binance" };
+  }).filter(function (r) { return isFinite(r.ts) && isFinite(r.rate); });
+  return {
+    rows: rows, urls: [url], pages: 1,
+    source: "內建快照（於 " + (data.fetchedAt || "時間不詳") + " 抓取）",
+    snapshot: data
+  };
+}
+async function fetchBybitInstrument() {
+  const u = new URL(BYBIT_API + "/v5/market/instruments-info");
+  u.searchParams.set("category", "linear");
+  u.searchParams.set("symbol", BYBIT_SYMBOL);
+  const data = await fetchJsonWithRetry(u.toString(), 5);
+  if (data.retCode !== 0) throw new Error("Bybit retCode=" + data.retCode + " " + (data.retMsg || ""));
+  const item = ((data.result && data.result.list) || [])[0];
+  if (!item) throw new Error("instruments-info 沒有回傳 MSTRUSDT");
+  let cap = null;
+  if (item.fundingCap != null) cap = Number(item.fundingCap);
+  else if (item.upperFundingRate != null) cap = Number(item.upperFundingRate);
+  return {
+    venue: "bybit", name: "Bybit", symbol: item.symbol,
+    contractType: item.contractType || "LinearPerpetual",
+    settleCoin: item.settleCoin || "USDT",
+    fundingInterval: Number(item.fundingInterval) || INTERVAL_MIN,
+    launchTime: item.launchTime ? Number(item.launchTime) : BYBIT_LAUNCH_FALLBACK,
+    status: item.status, cap: cap
+  };
+}
+async function fetchBybitFunding(intervalMin, onProgress) {
+  const all = [], seen = new Set(), urls = [];
+  let endTime = null, pages = 0;
+  const expected = Math.ceil((Date.now() - BYBIT_LAUNCH_FALLBACK) / ((intervalMin || INTERVAL_MIN) * 60 * 1000));
+  while (pages < MAX_BYBIT_PAGES) {
+    const u = new URL(BYBIT_API + "/v5/market/funding/history");
+    u.searchParams.set("category", "linear");
+    u.searchParams.set("symbol", BYBIT_SYMBOL);
+    u.searchParams.set("limit", String(PAGE_SIZE));
+    if (endTime != null) u.searchParams.set("endTime", String(endTime));
+    const url = u.toString();
+    urls.push(url);
+    const data = await fetchJsonWithRetry(url);
+    if (data.retCode !== 0) throw new Error("Bybit retCode=" + data.retCode + " " + (data.retMsg || ""));
+    const list = (data.result && data.result.list) || [];
+    pages += 1;
+    let oldest = Infinity;
+    for (let i = 0; i < list.length; i++) {
+      const ts = Number(list[i].fundingRateTimestamp);
+      const rate = Number(list[i].fundingRate);
+      if (!isFinite(ts) || !isFinite(rate) || seen.has(ts)) continue;
+      seen.add(ts);
+      all.push({ ts: ts, rate: rate, exchange: "bybit" });
+      if (ts < oldest) oldest = ts;
+    }
+    if (onProgress) onProgress(pages, all.length, expected);
+    if (list.length < PAGE_SIZE || oldest === Infinity) break;
+    endTime = oldest - 1;
+    await sleep(PAGE_DELAY_MS);
+  }
+  all.sort(function (a, b) { return a.ts - b.ts; });
+  return { rows: all, urls: urls, pages: pages, source: "Bybit API v5 /v5/market/funding/history" };
+}
+function overlapStats(aRows, bRows, intervalMin, positionUsd) {
+  if (!aRows.length || !bRows.length) return null;
+  const start = Math.max(aRows[0].ts, bRows[0].ts);
+  const end = Math.min(aRows[aRows.length - 1].ts, bRows[bRows.length - 1].ts);
+  if (end < start) return null;
+  const a = windowStats(aRows, start, end, intervalMin);
+  const b = windowStats(bRows, start, end, intervalMin);
+  return {
+    start: start, end: end,
+    binance: Object.assign({}, a, { actualUsd: a.count ? positionUsd * a.sum : null, yearlyUsd: a.annualized == null ? null : positionUsd * a.annualized }),
+    bybit: Object.assign({}, b, { actualUsd: b.count ? positionUsd * b.sum : null, yearlyUsd: b.annualized == null ? null : positionUsd * b.annualized })
+  };
+}
+function showError(parts) {
+  const box = $("errorBox");
+  const items = (parts || []).filter(Boolean);
+  if (!items.length) { box.classList.add("hidden"); box.innerHTML = ""; return; }
+  box.classList.remove("hidden");
+  let html = "<h2>部分資料沒抓到</h2>";
+  html += "<p>此頁是在你的裝置上直接向交易所公開 API 抓資料。Bybit 在部分地區（包含部分美國 IP）會被擋，請改用台灣網路、用 Safari 或 Chrome 重新整理。幣安會依序嘗試 <code>fapi.binance.com</code> 與 <code>www.binance.com</code>；若兩邊都失敗，會改用本頁附帶的幣安快照（可能不是最新）。</p>";
+  items.forEach(function (p) {
+    html += "<p><strong>" + escapeHtml(p.title) + "</strong></p>";
+    html += "<pre class=\"raw\">" + escapeHtml(p.message || "") + "</pre>";
+    if (p.urls && p.urls.length) {
+      html += "<ul class=\"urls\">";
+      p.urls.slice(0, 6).forEach(function (u) {
+        html += "<li><a href=\"" + u.replace(/"/g, "&quot;") + "\" target=\"_blank\" rel=\"noopener\">" + escapeHtml(u) + "</a></li>";
+      });
+      html += "</ul>";
+    }
+  });
+  html += "<p>請依序試試：確認台灣網路、點開上面的 API 連結看能不能直接顯示 JSON，再把錯誤畫面截圖傳回對話。</p>";
+  box.innerHTML = html;
+}
+function renderVenues() {
+  const el = $("venues");
+  const venues = [
+    { key: "binance", title: "幣安 MSTRUSDT", klass: "binance" },
+    { key: "bybit", title: "Bybit MSTRUSDT", klass: "bybit" }
+  ];
+  let any = false, html = "";
+  venues.forEach(function (v) {
+    const pack = last[v.key], info = pack.meta, stats = pack.stats;
+    if (!info && !stats && !pack.error) return;
+    any = true;
+    html += "<article class=\"venue\"><h2><span class=\"dot " + v.klass + "\"></span>" + v.title + "</h2>";
+    if (pack.error && !stats) { html += "<p class=\"muted\">這一家這次沒抓到資料。</p></article>"; return; }
+    const intervalH = info && info.fundingInterval ? (info.fundingInterval / 60) : 8;
+    html += "<p><strong>合約：</strong>" + (info && info.contractType ? info.contractType : "USDT 永續") +
+      "　<strong>結算：</strong>" + ((info && info.settleCoin) || "USDT") + "</p>";
+    html += "<p><strong>官方上市：</strong><span class=\"num\">" +
+      (info && info.launchTime ? formatTaipei(info.launchTime) + " 台北時間" : "—") +
+      "</span><br><span class=\"muted num\">UTC " + (info && info.launchTime ? formatUTC(info.launchTime) : "—") + "</span></p>";
+    html += "<p><strong>資金費間隔：</strong><span class=\"num\">" + intervalH + " 小時</span>";
+    if (info && info.cap != null && isFinite(info.cap)) html += "　<strong>費率上限：</strong><span class=\"num\">±" + pct(Math.abs(info.cap), 0) + "</span>";
+    if (v.key === "binance") html += "　<strong>利息成分：</strong><span class=\"num\">0%</span>";
+    html += "</p>";
+    if (stats) {
+      html += "<p><strong>資料區間：</strong><span class=\"num\">" + formatTaipei(stats.firstTs) + " ～ " + formatTaipei(stats.lastTs) + "</span><br>" +
+        "<span class=\"muted num\">UTC " + formatUTC(stats.firstTs) + " ～ " + formatUTC(stats.lastTs) + "</span></p>";
+      html += "<p><strong>筆數：</strong><span class=\"num\">" + stats.count.toLocaleString("en-US") +
+        "</span>　<strong>天數：</strong><span class=\"num\">" + (stats.elapsedDays != null ? stats.elapsedDays.toFixed(2) : "—") + "</span></p>";
+      html += "<p><strong>正／零／負：</strong><span class=\"num\">" +
+        pct(stats.pctPositive, 1) + "／" + pct(stats.pctZero, 1) + "／" + pct(stats.pctNegative, 1) + "</span></p>";
+      html += "<p><strong>單次最高：</strong><span class=\"" + clsSign(stats.max.rate) + "\">" + signedPct(stats.max.rate, 4) +
+        "</span><br><span class=\"muted num\">" + formatTaipei(stats.max.ts) + " 台北時間</span></p>";
+      html += "<p><strong>單次最低：</strong><span class=\"" + clsSign(stats.min.rate) + "\">" + signedPct(stats.min.rate, 4) +
+        "</span><br><span class=\"muted num\">" + formatTaipei(stats.min.ts) + " 台北時間</span></p>";
+    }
+    if (pack.source) html += "<p class=\"muted\">來源：" + escapeHtml(pack.source) + "</p>";
+    html += "</article>";
+  });
+  if (any) { el.classList.remove("hidden"); el.innerHTML = html; }
+}
+function cell(v, kind) {
+  if (kind === "money") return "<td class=\"" + clsSign(v) + "\">" + money(v) + "</td>";
+  return "<td class=\"" + clsSign(v) + "\">" + signedPct(v) + "</td>";
+}
+function renderCompare() {
+  const el = $("compareBox");
+  const b = last.binance.stats, y = last.bybit.stats;
+  if (!b && !y) return;
+  el.classList.remove("hidden");
+  const ov = overlapStats(last.binance.rows, last.bybit.rows, INTERVAL_MIN, POSITION_USD);
+  const rows = [
+    ["全期（各自有資料起）", b && b.annualized, y && y.annualized],
+    ["重疊期（兩邊都有資料）", ov && ov.binance.annualized, ov && ov.bybit.annualized],
+    ["近 30 天", b && b.last30 && b.last30.annualized, y && y.last30 && y.last30.annualized],
+    ["近 90 天", b && b.last90 && b.last90.annualized, y && y.last90 && y.last90.annualized],
+    ["近 365 天", b && b.last365 && b.last365.annualized, y && y.last365 && y.last365.annualized]
+  ];
+  let html = "<h2>年化資金費率對照</h2>";
+  if (ov) {
+    html += "<p class=\"muted\">重疊期：" + formatTaipei(ov.start) + " ～ " + formatTaipei(ov.end) +
+      "（台北時間），幣安 " + ov.binance.count.toLocaleString("en-US") + " 筆、Bybit " + ov.bybit.count.toLocaleString("en-US") + " 筆。</p>";
+  }
+  html += "<table><thead><tr><th>期間</th><th><span class=\"dot binance\"></span>幣安年化</th><th><span class=\"dot bybit\"></span>Bybit 年化</th></tr></thead><tbody>";
+  rows.forEach(function (r) { html += "<tr><td>" + r[0] + "</td>" + cell(r[1]) + cell(r[2]) + "</tr>"; });
+  html += "</tbody></table>";
+  el.innerHTML = html;
+}
+function renderPosition() {
+  const el = $("posBox");
+  const b = last.binance.stats, y = last.bybit.stats;
+  if (!b && !y) return;
+  el.classList.remove("hidden");
+  const ov = overlapStats(last.binance.rows, last.bybit.rows, INTERVAL_MIN, POSITION_USD);
+  function line(label, aWin, bWin) {
+    return "<tr><td>" + label + "</td>" +
+      cell(aWin && aWin.actualUsd, "money") + cell(bWin && bWin.actualUsd, "money") +
+      cell(aWin && (aWin.yearlyUsd != null ? aWin.yearlyUsd : aWin.fullYearlyUsd), "money") +
+      cell(bWin && (bWin.yearlyUsd != null ? bWin.yearlyUsd : bWin.fullYearlyUsd), "money") + "</tr>";
+  }
+  el.innerHTML = "<h2>2 萬 USDT 倉位資金費</h2>" +
+    "<p class=\"muted\">「實際累計」是該期間每次資金費加總 × 20,000 USDT，也就是這段時間多頭實際支付（或收取）的金額。「一年（年化）」則把同一段期間折成一年。正費率時多頭支付、空頭／期現套利收取。不含手續費與滑價。</p>" +
+    "<table><thead><tr><th>期間</th><th>幣安實際累計</th><th>Bybit 實際累計</th><th>幣安一年（年化）</th><th>Bybit 一年（年化）</th></tr></thead><tbody>" +
+    line("全期", b, y) + line("重疊期", ov && ov.binance, ov && ov.bybit) +
+    line("近 30 天", b && b.last30, y && y.last30) + line("近 90 天", b && b.last90, y && y.last90) +
+    line("近 365 天", b && b.last365, y && y.last365) + "</tbody></table>";
+}
+function renderMonths() {
+  const el = $("monthBox");
+  const b = last.binance.stats, y = last.bybit.stats;
+  if ((!b || !b.months.length) && (!y || !y.months.length)) return;
+  el.classList.remove("hidden");
+  const mapB = new Map(), mapY = new Map(), keys = new Set();
+  (b && b.months || []).forEach(function (m) { mapB.set(m.month, m); keys.add(m.month); });
+  (y && y.months || []).forEach(function (m) { mapY.set(m.month, m); keys.add(m.month); });
+  const months = Array.from(keys).sort();
+  let html = "<h2>各月年化（UTC 曆月）</h2><table><thead><tr><th>月份</th><th>幣安年化</th><th>Bybit 年化</th><th>幣安累計</th><th>Bybit 累計</th></tr></thead><tbody>";
+  months.forEach(function (k) {
+    const mb = mapB.get(k), my = mapY.get(k);
+    html += "<tr><td class=\"num\">" + k + "</td>" + cell(mb && mb.annualized) + cell(my && my.annualized) +
+      cell(mb && mb.actualUsd, "money") + cell(my && my.actualUsd, "money") + "</tr>";
+  });
+  html += "</tbody></table>";
+  el.innerHTML = html;
+}
+function renderYears() {
+  const el = $("yearBox");
+  const b = last.binance.stats, y = last.bybit.stats;
+  if ((!b || !b.years.length) && (!y || !y.years.length)) return;
+  el.classList.remove("hidden");
+  const mapB = new Map(), mapY = new Map(), keys = new Set();
+  (b && b.years || []).forEach(function (m) { mapB.set(m.year, m); keys.add(m.year); });
+  (y && y.years || []).forEach(function (m) { mapY.set(m.year, m); keys.add(m.year); });
+  const years = Array.from(keys).sort(function (a, c) { return a - c; });
+  let html = "<h2>各年年化（UTC 曆年）</h2><table><thead><tr><th>年份</th><th>幣安年化</th><th>Bybit 年化</th><th>幣安筆數</th><th>Bybit 筆數</th></tr></thead><tbody>";
+  years.forEach(function (k) {
+    const mb = mapB.get(k), my = mapY.get(k);
+    html += "<tr><td class=\"num\">" + k + "</td>" + cell(mb && mb.annualized) + cell(my && my.annualized) +
+      "<td class=\"num\">" + (mb ? mb.count.toLocaleString("en-US") : "—") + "</td>" +
+      "<td class=\"num\">" + (my ? my.count.toLocaleString("en-US") : "—") + "</td></tr>";
+  });
+  html += "</tbody></table>";
+  el.innerHTML = html;
+}
+function cssVar(name, fallback) {
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
+}
+function setupCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const w = Math.max(1, Math.floor(rect.width));
+  const h = Math.max(1, Math.floor(rect.height));
+  canvas.width = Math.floor(w * dpr);
+  canvas.height = Math.floor(h * dpr);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx: ctx, w: w, h: h };
+}
+function toCum(rows) {
+  let cum = 0;
+  return rows.map(function (r) { cum += r.rate; return { x: r.ts, y: cum }; });
+}
+function drawMultiLine(canvas, series) {
+  const { ctx, w, h } = setupCanvas(canvas);
+  const pad = { l: 58, r: 12, t: 16, b: 36 };
+  ctx.clearRect(0, 0, w, h);
+  const used = series.filter(function (s) { return s.pts && s.pts.length; });
+  if (!used.length) return;
+  let minX = Infinity, maxX = -Infinity, minY = 0, maxY = 0;
+  used.forEach(function (s) {
+    s.pts.forEach(function (p) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    });
+  });
+  if (minY === maxY) { minY -= 0.01; maxY += 0.01; }
+  const plotW = w - pad.l - pad.r, plotH = h - pad.t - pad.b;
+  const xOf = function (x) { return pad.l + (x - minX) / Math.max(1, maxX - minX) * plotW; };
+  const yOf = function (y) { return pad.t + (maxY - y) / (maxY - minY) * plotH; };
+  const grid = cssVar("--grid", "#ccc");
+  const muted = cssVar("--muted", "#888");
+  ctx.strokeStyle = grid;
+  ctx.fillStyle = muted;
+  ctx.font = "11px sans-serif";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  for (let i = 0; i <= 4; i++) {
+    const yv = minY + (maxY - minY) * (1 - i / 4);
+    const y = yOf(yv);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+    ctx.fillText((yv * 100).toFixed(1) + "%", pad.l - 6, y);
+  }
+  const zeroY = yOf(0);
+  ctx.strokeStyle = muted;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(pad.l, zeroY); ctx.lineTo(w - pad.r, zeroY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  const start = new Date(minX);
+  let cursor = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1);
+  while (cursor <= maxX + 86400000 * 32) {
+    if (cursor >= minX && cursor <= maxX) {
+      const x = xOf(cursor);
+      ctx.strokeStyle = grid;
+      ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + plotH); ctx.stroke();
+      ctx.fillStyle = muted;
+      ctx.fillText((new Date(cursor).getUTCMonth() + 1) + "月", x, pad.t + plotH + 6);
+    }
+    const d = new Date(cursor);
+    cursor = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+  }
+  used.forEach(function (s) {
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < s.pts.length; i++) {
+      const x = xOf(s.pts[i].x), y = yOf(s.pts[i].y);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  });
+}
+function drawGroupedBars(canvas, months, aMap, bMap) {
+  const { ctx, w, h } = setupCanvas(canvas);
+  const pad = { l: 58, r: 12, t: 16, b: 36 };
+  ctx.clearRect(0, 0, w, h);
+  if (!months.length) return;
+  let minY = 0, maxY = 0;
+  months.forEach(function (k) {
+    [aMap.get(k), bMap.get(k)].forEach(function (m) {
+      const v = m && m.annualized != null ? m.annualized : 0;
+      if (v < minY) minY = v;
+      if (v > maxY) maxY = v;
+    });
+  });
+  if (minY === maxY) { minY -= 0.01; maxY += 0.01; }
+  const plotW = w - pad.l - pad.r, plotH = h - pad.t - pad.b;
+  const yOf = function (y) { return pad.t + (maxY - y) / (maxY - minY) * plotH; };
+  const grid = cssVar("--grid", "#ccc");
+  const muted = cssVar("--muted", "#888");
+  const colA = cssVar("--binance", "#c99700");
+  const colB = cssVar("--bybit", "#d65a12");
+  ctx.strokeStyle = grid;
+  ctx.fillStyle = muted;
+  ctx.font = "11px sans-serif";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  for (let i = 0; i <= 4; i++) {
+    const yv = minY + (maxY - minY) * (1 - i / 4);
+    const y = yOf(yv);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+    ctx.fillText((yv * 100).toFixed(0) + "%", pad.l - 6, y);
+  }
+  const zeroY = yOf(0);
+  ctx.strokeStyle = muted;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(pad.l, zeroY); ctx.lineTo(w - pad.r, zeroY); ctx.stroke();
+  ctx.setLineDash([]);
+  const slot = plotW / months.length;
+  const barW = Math.max(4, Math.min(16, slot * 0.32));
+  months.forEach(function (k, i) {
+    const mid = pad.l + slot * i + slot / 2;
+    [
+      { v: aMap.get(k) && aMap.get(k).annualized, c: colA, xOff: -barW - 1 },
+      { v: bMap.get(k) && bMap.get(k).annualized, c: colB, xOff: 1 }
+    ].forEach(function (item) {
+      if (item.v == null || !isFinite(item.v)) return;
+      const y = yOf(item.v);
+      ctx.fillStyle = item.c;
+      ctx.fillRect(mid + item.xOff, Math.min(y, zeroY), barW, Math.max(1, Math.abs(y - zeroY)));
+    });
+    ctx.fillStyle = muted;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(Number(k.slice(5)) + "月", mid, pad.t + plotH + 6);
+  });
+}
+function renderCharts() {
+  const bRows = last.binance.rows, yRows = last.bybit.rows;
+  if (!bRows.length && !yRows.length) return;
+  $("chartBox1").classList.remove("hidden");
+  drawMultiLine($("cumChart"), [
+    { pts: toCum(bRows), color: cssVar("--binance", "#c99700") },
+    { pts: toCum(yRows), color: cssVar("--bybit", "#d65a12") }
+  ]);
+  const b = last.binance.stats, y = last.bybit.stats;
+  const keys = new Set(), mapB = new Map(), mapY = new Map();
+  (b && b.months || []).forEach(function (m) { mapB.set(m.month, m); keys.add(m.month); });
+  (y && y.months || []).forEach(function (m) { mapY.set(m.month, m); keys.add(m.month); });
+  const months = Array.from(keys).sort();
+  if (months.length) {
+    $("chartBox2").classList.remove("hidden");
+    drawGroupedBars($("monthChart"), months, mapB, mapY);
+  }
+}
+function allRows() {
+  return last.binance.rows.concat(last.bybit.rows).sort(function (a, b) {
+    if (a.ts !== b.ts) return a.ts - b.ts;
+    return (a.exchange || "").localeCompare(b.exchange || "");
+  });
+}
+function buildCsv() {
+  let out = "exchange,timestamp_utc,time_taipei,funding_rate,rate_type\n";
+  const rows = allRows();
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    out += (r.exchange || "") + "," + formatUTC(r.ts) + "," + formatTaipei(r.ts) + "," + r.rate + "," + (r.rateType || "") + "\n";
+  }
+  return out;
+}
+function compactStats(stats) {
+  if (!stats) return null;
+  return {
+    firstTsUtc: formatUTC(stats.firstTs), lastTsUtc: formatUTC(stats.lastTs),
+    count: stats.count, elapsedDays: stats.elapsedDays, annualized: stats.annualized,
+    last30: stats.last30 && stats.last30.annualized, last90: stats.last90 && stats.last90.annualized,
+    last365: stats.last365 && stats.last365.annualized, actualUsd: stats.actualUsd,
+    last30ActualUsd: stats.last30 && stats.last30.actualUsd,
+    last90ActualUsd: stats.last90 && stats.last90.actualUsd,
+    fullYearlyUsd: stats.fullYearlyUsd, mean: stats.mean,
+    pctPositive: stats.pctPositive, pctZero: stats.pctZero, pctNegative: stats.pctNegative,
+    max: stats.max, min: stats.min
+  };
+}
+function buildSummary() {
+  const lines = [];
+  lines.push("Bybit 與幣安 MSTRUSDT 資金費率回測");
+  lines.push("標的：Strategy（Nasdaq: MSTR）股票 USDT 永續；不含手續費、滑價、借券成本與股價損益。");
+  if (last.binance.meta) {
+    const i = last.binance.meta;
+    lines.push("幣安：符號 " + i.symbol + "，類型 " + (i.contractType || "") + "，上市 UTC " + formatUTC(i.launchTime) + "，間隔 " + (i.fundingInterval / 60) + " 小時，上限 ±" + (i.cap != null ? pct(Math.abs(i.cap), 0) : "—") + "，利息 0%。來源：" + (last.binance.source || ""));
+  }
+  if (last.binance.stats) {
+    const s = last.binance.stats;
+    lines.push("幣安區間（台北）：" + formatTaipei(s.firstTs) + " ～ " + formatTaipei(s.lastTs) + "；" + s.count + " 筆；全期年化 " + signedPct(s.annualized) + "；近 30 天 " + signedPct(s.last30 && s.last30.annualized) + "；近 90 天 " + signedPct(s.last90 && s.last90.annualized) + "；2 萬倉位全期實際累計 " + money(s.actualUsd));
+  } else if (last.binance.error) {
+    lines.push("幣安：抓取失敗。");
+  }
+  if (last.bybit.meta) {
+    const i = last.bybit.meta;
+    lines.push("Bybit：符號 " + i.symbol + "，類型 " + (i.contractType || "") + "，上市 UTC " + formatUTC(i.launchTime) + "，間隔 " + (i.fundingInterval / 60) + " 小時。來源：" + (last.bybit.source || ""));
+  }
+  if (last.bybit.stats) {
+    const s = last.bybit.stats;
+    lines.push("Bybit 區間（台北）：" + formatTaipei(s.firstTs) + " ～ " + formatTaipei(s.lastTs) + "；" + s.count + " 筆；全期年化 " + signedPct(s.annualized) + "；近 30 天 " + signedPct(s.last30 && s.last30.annualized) + "；近 90 天 " + signedPct(s.last90 && s.last90.annualized) + "；2 萬倉位全期實際累計 " + money(s.actualUsd));
+  } else if (last.bybit.error) {
+    lines.push("Bybit：抓取失敗。");
+  }
+  const ov = overlapStats(last.binance.rows, last.bybit.rows, INTERVAL_MIN, POSITION_USD);
+  if (ov) {
+    lines.push("重疊期（台北）：" + formatTaipei(ov.start) + " ～ " + formatTaipei(ov.end) + "；幣安年化 " + signedPct(ov.binance.annualized) + "，Bybit 年化 " + signedPct(ov.bybit.annualized) + "；2 萬倉位實際累計 幣安 " + money(ov.binance.actualUsd) + "、Bybit " + money(ov.bybit.actualUsd));
+  }
+  const json = {
+    symbol: "MSTRUSDT", positionUsd: POSITION_USD,
+    binance: compactStats(last.binance.stats), bybit: compactStats(last.bybit.stats),
+    overlap: ov && {
+      startUtc: formatUTC(ov.start), endUtc: formatUTC(ov.end),
+      binanceAnnualized: ov.binance.annualized, bybitAnnualized: ov.bybit.annualized,
+      binanceActualUsd: ov.binance.actualUsd, bybitActualUsd: ov.bybit.actualUsd
+    }
+  };
+  lines.push("");
+  lines.push("```json");
+  lines.push(JSON.stringify(json));
+  lines.push("```");
+  return lines.join("\n");
+}
+function downloadCsv() {
+  const blob = new Blob([buildCsv()], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "mstr-funding-binance-bybit.csv";
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+}
+async function copySummary() {
+  const text = buildSummary();
+  try {
+    await navigator.clipboard.writeText(text);
+    toast("已複製結果，可貼回對話");
+  } catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); toast("已複製結果，可貼回對話"); }
+    catch (err) { toast("複製失敗，請手動選取"); }
+    ta.remove();
+  }
+}
+function hasResults() { return !!(last.binance.stats || last.bybit.stats); }
+function paint() {
+  renderVenues(); renderCompare(); renderPosition(); renderMonths(); renderYears(); renderCharts();
+  $("btnCsv").disabled = !allRows().length;
+  $("btnCopy").disabled = !hasResults();
+}
+async function runBinance() {
+  setVenueProgress("binance", 4, "正在連線幣安…");
+  const meta = await fetchBinanceMeta().catch(function () {
+    return {
+      venue: "binance", name: "幣安", symbol: BINANCE_SYMBOL, contractType: "TRADIFI_PERPETUAL",
+      settleCoin: "USDT", fundingInterval: INTERVAL_MIN, launchTime: BINANCE_ONBOARD,
+      status: "TRADING", cap: 0.02, interestRate: 0
+    };
+  });
+  last.binance.meta = meta;
+  try {
+    const result = await fetchBinanceFunding(function (pages, rows, expected) {
+      setVenueProgress("binance", expected ? Math.min(95, rows / expected * 100) : Math.min(95, pages * 40),
+        "第 " + pages + " 頁，已抓 " + rows.toLocaleString("en-US") + " 筆");
+    });
+    if (!result.rows.length) throw new Error("幣安 API 回傳 0 筆資金費率");
+    last.binance.rows = result.rows;
+    last.binance.urls = result.urls;
+    last.binance.source = result.source;
+    last.binance.error = null;
+    last.binance.stats = computeFundingStats(result.rows, {
+      now: Date.now(), positionUsd: POSITION_USD, intervalMin: meta.fundingInterval || INTERVAL_MIN
+    });
+    setVenueProgress("binance", 100, "完成，共 " + result.rows.length.toLocaleString("en-US") + " 筆");
+  } catch (err) {
+    try {
+      setVenueProgress("binance", 30, "即時 API 失敗，改用快照…");
+      const snap = await loadBinanceSnapshot();
+      if (!snap.rows.length) throw err;
+      last.binance.rows = snap.rows;
+      last.binance.urls = (err.tried || last.binance.urls || []).concat(snap.urls);
+      last.binance.source = snap.source;
+      last.binance.error = { title: "幣安即時 API 失敗，已改用快照", message: String(err && err.message || err), urls: err.tried || [] };
+      last.binance.stats = computeFundingStats(snap.rows, {
+        now: Date.now(), positionUsd: POSITION_USD, intervalMin: meta.fundingInterval || INTERVAL_MIN
+      });
+      setVenueProgress("binance", 100, "快照 " + snap.rows.length.toLocaleString("en-US") + " 筆（可能不是最新）");
+    } catch (err2) {
+      last.binance.error = { title: "幣安", message: String(err && err.message || err), urls: err.tried || last.binance.urls };
+      setVenueProgress("binance", 0, "抓取失敗");
+      throw err2;
+    }
+  }
+}
+async function runBybit() {
+  setVenueProgress("bybit", 4, "正在連線 Bybit…");
+  const info = await fetchBybitInstrument();
+  last.bybit.meta = info;
+  const result = await fetchBybitFunding(info.fundingInterval, function (pages, rows, expected) {
+    setVenueProgress("bybit", expected ? Math.min(95, rows / expected * 100) : Math.min(95, pages / 6 * 100),
+      "第 " + pages + " 頁，已抓 " + rows.toLocaleString("en-US") + " 筆／約 " + expected.toLocaleString("en-US") + " 筆");
+  });
+  if (!result.rows.length) throw new Error("Bybit API 回傳 0 筆資金費率");
+  last.bybit.rows = result.rows;
+  last.bybit.urls = result.urls;
+  last.bybit.source = result.source;
+  last.bybit.error = null;
+  last.bybit.stats = computeFundingStats(result.rows, {
+    now: Date.now(), positionUsd: POSITION_USD, intervalMin: info.fundingInterval || INTERVAL_MIN
+  });
+  setVenueProgress("bybit", 100, "完成，共 " + result.rows.length.toLocaleString("en-US") + " 筆");
+}
+async function run() {
+  if (running) return;
+  running = true;
+  $("btnRun").disabled = true;
+  $("btnCsv").disabled = true;
+  $("btnCopy").disabled = true;
+  $("errorBox").classList.add("hidden");
+  $("status").textContent = "正在同時向幣安與 Bybit 抓資料…";
+  last.binance = { rows: [], stats: null, meta: last.binance.meta, error: null, source: null, urls: [] };
+  last.bybit = { rows: [], stats: null, meta: last.bybit.meta, error: null, source: null, urls: [] };
+  await Promise.all([
+    runBinance().catch(function (err) {
+      last.binance.error = last.binance.error || { title: "幣安", message: String(err && err.message || err), urls: err && err.tried };
+      setVenueProgress("binance", 0, "抓取失敗");
+      return err;
+    }),
+    runBybit().catch(function (err) {
+      last.bybit.error = { title: "Bybit", message: String(err && err.message || err), urls: last.bybit.urls };
+      setVenueProgress("bybit", 0, "抓取失敗");
+      return err;
+    })
+  ]);
+  const errors = [];
+  if (last.binance.error) errors.push(last.binance.error);
+  if (last.bybit.error) errors.push(last.bybit.error);
+  showError(errors);
+  if (hasResults()) {
+    paint();
+    if (last.binance.stats && last.bybit.stats && !errors.length) $("status").textContent = "計算完成。建議按「複製結果」貼回對話。";
+    else if (errors.length) $("status").textContent = "已算出有抓到的那一家，另一家失敗，細節見上方錯誤框。";
+    else $("status").textContent = "計算完成。";
+  } else {
+    $("status").textContent = "兩邊都沒抓到資料。";
+  }
+  running = false;
+  $("btnRun").disabled = false;
+}
+$("btnRun").addEventListener("click", run);
+$("btnCsv").addEventListener("click", function () { if (allRows().length) downloadCsv(); });
+$("btnCopy").addEventListener("click", copySummary);
+window.addEventListener("resize", function () { if (hasResults()) renderCharts(); });
+run();
+</script>
+</body>
+</html>
