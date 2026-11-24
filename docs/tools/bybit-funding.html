@@ -175,12 +175,17 @@
     z-index: 20;
   }
   footer { color: var(--muted); font-size: 13px; margin-top: 8px; }
-  .back { font-size: 14px; margin-bottom: 12px; display: inline-block; }
+  .back { font-size: 14px; margin-bottom: 0; display: inline-block; }
+  .switch { margin-bottom: 12px; }
 </style>
 </head>
 <body>
 <main>
-  <a class="back" href="../">← 回到監控首頁</a>
+  <div class="switch">
+    <a class="back" href="../">← 回到監控首頁</a>
+    <span class="muted">｜</span>
+    <a class="back" href="bybit-funding-usdt.html">USDT 永續 BTCUSDT 版</a>
+  </div>
   <h1>Bybit 幣本位 BTCUSD 資金費率回測</h1>
   <p class="lead">在你自己的瀏覽器向 Bybit 公開 API 抓取完整歷史（約 2018-11-15 起，約 8,800 筆）。資料不會經過我們的伺服器。請保持此頁開啟直到算完。</p>
 
@@ -553,7 +558,7 @@ function renderMeta(info, stats) {
   el.classList.remove("hidden");
   const intervalH = info.fundingInterval / 60;
   el.innerHTML =
-    "<p><strong>交易對：</strong>Bybit " + (info.contractType || "Inverse") + " " + SYMBOL + "／USDT 不是這個頁面；這是<strong>幣本位（inverse）BTCUSD</strong>。</p>" +
+    "<p><strong>交易對：</strong>Bybit " + (info.contractType || "Inverse") + " " + SYMBOL + "。這是<strong>幣本位（inverse）BTCUSD</strong>，不是 USDT 永續。USDT 永續請看<a href=\"bybit-funding-usdt.html\">這個頁面</a>。</p>" +
     "<p><strong>結算幣：</strong>" + (info.settleCoin || "BTC") +
     "　<strong>資金費間隔：</strong><span class=\"num\">" + info.fundingInterval + " 分鐘（" + intervalH + " 小時）</span></p>" +
     "<p><strong>資料區間：</strong><span class=\"num\">" + formatTaipei(stats.firstTs) + " ～ " + formatTaipei(stats.lastTs) + "（台北時間）</span><br>" +
