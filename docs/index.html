@@ -102,6 +102,18 @@
   .banner.error { border-left-color: var(--down); }
   .banner.info { border-left-color: var(--muted); }
 
+  /* ---------- 市場週期判斷 ---------- */
+  .cycle {
+    margin-top: 22px;
+    padding: 16px 16px 14px;
+    background: var(--panel);
+    border-radius: 10px;
+    border-left: 3px solid var(--btc);
+  }
+  .cycle h2 { margin: 0 0 8px; }
+  .cycle p { margin: 0; font-size: 15px; line-height: 1.65; }
+  .cycle .legend { margin-top: 8px; }
+
   /* ---------- 價位尺：這頁的主角 ---------- */
   .ruler { position: relative; margin-top: 30px; padding: 46px 0 64px; }
   .track { position: relative; height: 14px; border-radius: 7px; overflow: hidden; display: flex; }
@@ -191,6 +203,12 @@
 
   <div class="banners" id="banners"></div>
 
+  <section class="cycle" aria-labelledby="h-cycle">
+    <h2 id="h-cycle">市場週期判斷</h2>
+    <p>目前為熊市築底階段。站點主人判斷，牛市很有可能於 <b>2027 年第二季</b>啟動。這是個人觀點，不是保證。</p>
+    <p class="legend">現價低於現貨 ETF 平均成本，並接近網路平均挖礦電力成本。判斷日期：2026-11-25。</p>
+  </section>
+
   <div class="ruler" id="ruler" aria-label="現價和關鍵價位的位置"></div>
   <p class="ruler-caption" id="rulerCaption"></p>
 
@@ -263,7 +281,7 @@
   <footer>
     資料來源：Coinbase（BTC）、Nasdaq 官方成交經 Yahoo（MSTR 開盤時段、IBIT）、Binance／Hyperliquid MSTR 永續合約（美股休市時的 24 小時參考價）、SEC EDGAR（Strategy 8-K 與季報）、SoSoValue（ETF 資金流）、CoinGecko（BTC.D）。
     頁面上的 BTC 價格即時更新，其他數據約每 15 分鐘更新一次。
-    指標依「2026 第三季度簡報」的框架計算，只是追蹤工具，不構成投資建議。
+    指標依「2026 第三季度簡報」的框架計算，只是追蹤工具，不構成投資建議。市場週期判斷是站點主人的個人觀點，會依行情更新，並非對未來漲跌的保證。
   </footer>
 </main>
 

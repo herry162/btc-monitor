@@ -1,6 +1,6 @@
 {
-  "generated_at": 1795438876,
-  "count": 300,
+  "generated_at": 1795574725,
+  "count": 304,
   "events": [
     {
       "accession": "0001193125-20-313349",
@@ -8101,6 +8101,115 @@
       "coupon_rate": null,
       "conversion_price": null,
       "notes": null
+    },
+    {
+      "accession": "0001193125-26-470961",
+      "filed_at": "2026-11-23T08:00:14-05:00",
+      "filed_date": "2026-11-23",
+      "form": "8-K",
+      "period_start": "2026-11-16",
+      "period_end": "2026-11-22",
+      "type": "btc_buy",
+      "security": null,
+      "shares": null,
+      "net_proceeds_usd": null,
+      "notional_usd": null,
+      "btc": 457.0,
+      "avg_price_usd": null,
+      "use_of_proceeds": {
+        "btc_buy_usd": null,
+        "usd_reserve_usd": null,
+        "repurchase_usd": null,
+        "dividend_usd": null
+      },
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526470961/mstr-20261123.htm",
+      "parse_confidence": "high",
+      "stage": null,
+      "coupon_rate": null,
+      "conversion_price": null,
+      "notes": null
+    },
+    {
+      "accession": "0001193125-26-470961",
+      "filed_at": "2026-11-23T08:00:14-05:00",
+      "filed_date": "2026-11-23",
+      "form": "8-K",
+      "period_start": "2026-11-16",
+      "period_end": "2026-11-22",
+      "type": "mstr_atm",
+      "security": "MSTR",
+      "shares": 1925676.0,
+      "net_proceeds_usd": 176700000.0,
+      "notional_usd": null,
+      "btc": null,
+      "avg_price_usd": null,
+      "use_of_proceeds": {
+        "btc_buy_usd": null,
+        "usd_reserve_usd": null,
+        "repurchase_usd": null,
+        "dividend_usd": null
+      },
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526470961/mstr-20261123.htm",
+      "parse_confidence": "high",
+      "stage": null,
+      "coupon_rate": null,
+      "conversion_price": null,
+      "notes": null
+    },
+    {
+      "accession": "0001193125-26-470961",
+      "filed_at": "2026-11-23T08:00:14-05:00",
+      "filed_date": "2026-11-23",
+      "form": "8-K",
+      "period_start": "2026-11-16",
+      "period_end": "2026-11-22",
+      "type": "pref_repurchase",
+      "security": "STRC",
+      "shares": 2183747.0,
+      "net_proceeds_usd": 211800000.0,
+      "notional_usd": null,
+      "btc": null,
+      "avg_price_usd": null,
+      "use_of_proceeds": {
+        "btc_buy_usd": null,
+        "usd_reserve_usd": null,
+        "repurchase_usd": null,
+        "dividend_usd": null
+      },
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526470961/mstr-20261123.htm",
+      "parse_confidence": "high",
+      "stage": null,
+      "coupon_rate": null,
+      "conversion_price": null,
+      "notes": null
+    },
+    {
+      "accession": "0001193125-26-470961",
+      "filed_at": "2026-11-23T08:00:14-05:00",
+      "filed_date": "2026-11-23",
+      "form": "8-K",
+      "period_start": "2026-11-16",
+      "period_end": "2026-11-22",
+      "type": "usd_reserve",
+      "security": null,
+      "shares": null,
+      "net_proceeds_usd": 4820000000.0,
+      "notional_usd": null,
+      "btc": null,
+      "avg_price_usd": null,
+      "use_of_proceeds": {
+        "btc_buy_usd": null,
+        "usd_reserve_usd": 3730000000.0,
+        "repurchase_usd": null,
+        "dividend_usd": null
+      },
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526470961/mstr-20261123.htm",
+      "parse_confidence": "high",
+      "stage": null,
+      "coupon_rate": null,
+      "conversion_price": null,
+      "notes": null
     }
-  ]
+  ],
+  "worker_url": "https://btc-monitor-sec.herry162.workers.dev"
 }
