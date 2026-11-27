@@ -437,7 +437,8 @@ function pct(x, digits) {
 function capLabel(x) {
   if (x == null || !isFinite(x)) return "—";
   const p = Math.abs(x) * 100;
-  const label = Math.abs(p - Math.round(p)) < 1e-9 ? String(Math.round(p)) : p.toFixed(1);
+  // keep two decimals when needed so 0.75% is not rounded to 0.8%
+  const label = Math.abs(p - Math.round(p)) < 1e-9 ? String(Math.round(p)) : String(parseFloat(p.toFixed(2)));
   return "±" + label + "%";
 }
 function money(x) {
@@ -1030,7 +1031,7 @@ function buildSummary() {
   }
   if (last.bybit.stats) {
     const s = last.bybit.stats;
-    lines.push("Bybit 區間（台北）：" + formatTaipei(s.firstTs) + " ～ " + formatTaipei(s.lastTs) + "；" + s.count + " 筆；全期年化 " + signedPct(s.annualized) + "；近 30 天 " + signedPct(s.last30 && s.last30.annualized) + "；近 90 天 " + signedPct(s.last90 && s.last90.annualized) + "；2 萬倉位全期實際累計 " + money(s.actualUsd));
+    lines.push("Bybit 區間（台北）：" + formatTaipei(s.firstTs) + " ～ " + formatTaipei(s.lastTs) + "；" + s.count + " 筆；全期年化 " + signedPct(s.annualized) + "；近 30 天 " + signedPct(s.last30 && s.last30.annualized) + "；近 90 天 " + signedPct(s.last90 && s.last90.annualized) + "；2 萬倉位全期實際累計 " + money(s.actualUsd) + "；單次最高 " + signedPct(s.max.rate, 4) + "（" + formatTaipei(s.max.ts) + "）／最低 " + signedPct(s.min.rate, 4) + "（" + formatTaipei(s.min.ts) + "）");
   } else if (last.bybit.error) {
     lines.push("Bybit：抓取失敗。");
   }
